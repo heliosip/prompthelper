@@ -1,0 +1,47 @@
+{
+  "name": "prompthelper",
+  "version": "1.0.0",
+  "description": "AI Prompt Helper Extension",
+  "main": "index.js",
+  "scripts": {
+    "build": "webpack --config webpack.config.js",
+    "watch": "webpack --watch --config webpack.config.js",
+    "start": "ts-node server/index.ts",
+    "dev:server": "nodemon server/index.ts",
+    "dev:client": "webpack --watch --config webpack.config.js",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "test": "ts-node test/server.test.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/chrome": "^0.0.258",
+    "@types/react": "^18.2.55",
+    "@types/react-dom": "^18.2.19",
+    "bcrypt": "^5.1.1",
+    "express": "^4.21.2",
+    "fs": "^0.0.1-security",
+    "joi": "^17.13.3",
+    "path": "^0.12.7",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/axios": "^0.14.4",
+    "@types/bcrypt": "^5.0.2",
+    "@types/express": "^4.17.21",
+    "@types/joi": "^17.2.3",
+    "@types/node": "^22.10.10",
+    "axios": "^1.7.9",
+    "concurrently": "^9.1.2",
+    "css-loader": "^6.10.0",
+    "nodemon": "^3.1.9",
+    "style-loader": "^3.3.4",
+    "ts-loader": "^9.5.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3",
+    "webpack": "^5.90.1",
+    "webpack-cli": "^5.1.4"
+  }
+}
