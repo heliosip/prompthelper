@@ -1,13 +1,34 @@
-import express, { Request, Response, NextFunction } from 'express';
+import express from 'express';
+import { Request, Response, NextFunction } from 'express';
+import cors from 'cors';
 import fs from 'fs/promises';
 import path from 'path';
 import bcrypt from 'bcrypt';
 
 const app = express();
+
+// Add CORS middleware
+app.use(cors({
+  origin: true, // Allow all origins in development
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+
 app.use(express.json());
 
 const USERS_FILE = path.join(__dirname, 'users.json');
 const TEMPLATES_DIR = path.join(__dirname, '..', 'usertemplates');
+const HISTORY_DIR = path.join(__dirname, '..', 'userhistory');
+
+// Extended Request type to include body and params
+interface ExtendedRequest<
+  P extends Record<string, string> = Record<string, string>, 
+  ReqBody = any
+> extends Request {
+  body: ReqBody;
+  params: P;
+}
 
 // Type definitions
 interface User {
@@ -21,10 +42,27 @@ interface Template {
   content: string;
   category: string;
   aiTool: string;
+  outputType: string;
+  promptType: string;
   isUserTemplate: boolean;
   userId: string;
   createdAt: string;
   updatedAt: string;
+}
+
+interface HistoryEntry {
+  id: string;
+  templateId: string;
+  content: string;
+  timestamp: string;
+  userId: string;
+  metadata: {
+    templateName: string;
+    category: string;
+    aiTool: string;
+    outputType: string;
+    promptType: string;
+  };
 }
 
 interface CreateTemplateRequest {
@@ -32,12 +70,8 @@ interface CreateTemplateRequest {
   content: string;
   category: string;
   aiTool: string;
-}
-
-// Parameter types for route handlers
-interface TemplateParams {
-  username: string;
-  templateId?: string;
+  outputType: string;
+  promptType: string;
 }
 
 // Helper Functions
@@ -58,11 +92,26 @@ const validateTemplate = (template: CreateTemplateRequest): string | null => {
   if (!template.aiTool || !['claude', 'chatgpt'].includes(template.aiTool)) {
     return 'Valid AI tool (claude or chatgpt) is required';
   }
+  if (!template.outputType) {
+    return 'Output type is required';
+  }
+  if (!template.promptType) {
+    return 'Prompt type is required';
+  }
   return null;
 };
 
+// Check if directory exists
+const ensureDirectoryExists = async (dirPath: string): Promise<void> => {
+  try {
+    await fs.access(dirPath);
+  } catch {
+    await fs.mkdir(dirPath, { recursive: true });
+  }
+};
+
 // Authentication endpoint
-app.post('/auth', async (req: Request, res: Response, next: NextFunction) => {
+app.post('/auth', async (req: ExtendedRequest<{}, { username: string, password: string }>, res: Response, next: NextFunction) => {
   try {
     const { username, password } = req.body;
     console.log('Auth request for username:', username);
@@ -78,19 +127,55 @@ app.post('/auth', async (req: Request, res: Response, next: NextFunction) => {
     
     if (user && await bcrypt.compare(password, user.password)) {
       console.log('Authentication successful');
-      res.json({ success: true });
+      return res.status(200).json({ success: true });
     } else {
       console.log('Authentication failed');
-      res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
   } catch (error) {
-    next(error);
+    console.error('Auth error:', error);
+    return next(error);
   }
+});
+
+// Template endpoints
+app.get('/templates/:username', 
+  async (req: ExtendedRequest<{ username: string }>, res: Response, next: NextFunction) => {
+    try {
+      console.log('Getting templates for user:', req.params.username);
+      const userDir = path.join(TEMPLATES_DIR, req.params.username);
+      console.log('User directory path:', userDir);
+
+      await ensureDirectoryExists(userDir);
+      
+      try {
+        const templatesPath = path.join(userDir, 'templates.json');
+        console.log('Templates file path:', templatesPath);
+        
+        try {
+          await fs.access(templatesPath);
+          const templates = await fs.readFile(templatesPath, 'utf-8');
+          console.log('Templates found:', templates);
+          return res.status(200).json(JSON.parse(templates));
+        } catch {
+          console.log('No templates file found, creating empty one');
+          const emptyTemplates: Template[] = [];
+          await fs.writeFile(templatesPath, JSON.stringify(emptyTemplates, null, 2));
+          return res.status(200).json(emptyTemplates);
+        }
+      } catch (error) {
+        console.error('Error accessing templates:', error);
+        return res.status(200).json([]);
+      }
+    } catch (error) {
+      console.error('Templates GET error:', error);
+      return next(error);
+    }
 });
 
 // Create template
 app.post('/templates/:username', 
-  async (req: Request<TemplateParams>, res: Response, next: NextFunction) => {
+  async (req: ExtendedRequest<{ username: string }, CreateTemplateRequest>, res: Response, next: NextFunction) => {
     try {
       // Verify user exists
       const usersData = await fs.readFile(USERS_FILE, 'utf-8');
@@ -101,7 +186,7 @@ app.post('/templates/:username',
         return res.status(404).json({ error: 'User not found' });
       }
 
-      const templateData: CreateTemplateRequest = req.body;
+      const templateData = req.body;
       
       // Validate template data
       const validationError = validateTemplate(templateData);
@@ -121,13 +206,13 @@ app.post('/templates/:username',
 
       // Load existing templates
       const userDir = path.join(TEMPLATES_DIR, req.params.username);
-      await fs.mkdir(userDir, { recursive: true });
+      await ensureDirectoryExists(userDir);
       
       let templates: Template[] = [];
       try {
         const existingData = await fs.readFile(path.join(userDir, 'templates.json'), 'utf-8');
         templates = JSON.parse(existingData);
-      } catch (error) {
+      } catch {
         // File doesn't exist yet, starting with empty array
         templates = [];
       }
@@ -141,109 +226,84 @@ app.post('/templates/:username',
         JSON.stringify(templates, null, 2)
       );
 
-      res.status(201).json(newTemplate);
+      return res.status(201).json(newTemplate);
     } catch (error) {
-      next(error);
+      console.error('Template creation error:', error);
+      return next(error);
     }
 });
 
-// Get all templates for a user
-app.get('/templates/:username', 
-  async (req: Request<TemplateParams>, res: Response, next: NextFunction) => {
+// Save prompt to history
+app.post('/history/:username', 
+  async (req: ExtendedRequest<{ username: string }, HistoryEntry>, res: Response, next: NextFunction) => {
     try {
-      const userDir = path.join(TEMPLATES_DIR, req.params.username);
-      const templates = await fs.readFile(path.join(userDir, 'templates.json'), 'utf-8');
-      res.json(JSON.parse(templates));
-    } catch (error) {
-      next(error);
-    }
-});
-
-// Get single template
-app.get('/templates/:username/:templateId', 
-  async (req: Request<TemplateParams>, res: Response, next: NextFunction) => {
-    try {
-      const userDir = path.join(TEMPLATES_DIR, req.params.username);
-      const templatesData = await fs.readFile(path.join(userDir, 'templates.json'), 'utf-8');
-      const templates: Template[] = JSON.parse(templatesData);
+      const userHistoryDir = path.join(HISTORY_DIR, req.params.username);
+      await ensureDirectoryExists(userHistoryDir);
       
-      const template = templates.find(t => t.id === req.params.templateId);
-      if (!template) {
-        return res.status(404).json({ error: 'Template not found' });
-      }
+      const historyFile = path.join(userHistoryDir, 'history.json');
+      let history: HistoryEntry[] = [];
       
-      res.json(template);
-    } catch (error) {
-      next(error);
-    }
-});
-
-// Update template
-app.put('/templates/:username/:templateId', 
-  async (req: Request<TemplateParams>, res: Response, next: NextFunction) => {
-    try {
-      const userDir = path.join(TEMPLATES_DIR, req.params.username);
-      const templatesData = await fs.readFile(path.join(userDir, 'templates.json'), 'utf-8');
-      let templates: Template[] = JSON.parse(templatesData);
-      
-      const templateIndex = templates.findIndex(t => t.id === req.params.templateId);
-      if (templateIndex === -1) {
-        return res.status(404).json({ error: 'Template not found' });
+      // Load existing history if it exists
+      try {
+        const existingHistory = await fs.readFile(historyFile, 'utf-8');
+        history = JSON.parse(existingHistory);
+      } catch {
+        history = [];
       }
 
-      const templateData: CreateTemplateRequest = req.body;
-      const validationError = validateTemplate(templateData);
-      if (validationError) {
-        return res.status(400).json({ error: validationError });
-      }
-
-      // Update template while preserving id and creation date
-      templates[templateIndex] = {
-        ...templates[templateIndex],
-        ...templateData,
-        updatedAt: new Date().toISOString()
+      // Add new history entry
+      const newEntry: HistoryEntry = {
+        id: generateId(),
+        templateId: req.body.templateId,
+        content: req.body.content,
+        timestamp: new Date().toISOString(),
+        userId: req.params.username,
+        metadata: {
+          templateName: req.body.metadata.templateName || "Untitled Template",
+          category: req.body.metadata.category || "General",
+          aiTool: req.body.metadata.aiTool || "claude",
+          outputType: req.body.metadata.outputType || "other",
+          promptType: req.body.metadata.promptType || "other"
+        }
       };
 
+      history.push(newEntry);
+
+      // Save updated history
       await fs.writeFile(
-        path.join(userDir, 'templates.json'),
-        JSON.stringify(templates, null, 2)
+        historyFile,
+        JSON.stringify(history, null, 2)
       );
 
-      res.json(templates[templateIndex]);
+      return res.status(201).json(newEntry);
     } catch (error) {
-      next(error);
+      console.error('History save error:', error);
+      return next(error);
     }
 });
 
-// Delete template
-app.delete('/templates/:username/:templateId', 
-  async (req: Request<TemplateParams>, res: Response, next: NextFunction) => {
+// Get user's prompt history
+app.get('/history/:username', 
+  async (req: ExtendedRequest<{ username: string }>, res: Response, next: NextFunction) => {
     try {
-      const userDir = path.join(TEMPLATES_DIR, req.params.username);
-      const templatesData = await fs.readFile(path.join(userDir, 'templates.json'), 'utf-8');
-      let templates: Template[] = JSON.parse(templatesData);
+      const userHistoryDir = path.join(HISTORY_DIR, req.params.username);
+      const historyFile = path.join(userHistoryDir, 'history.json');
       
-      const templateIndex = templates.findIndex(t => t.id === req.params.templateId);
-      if (templateIndex === -1) {
-        return res.status(404).json({ error: 'Template not found' });
+      try {
+        await fs.access(historyFile);
+        const history = await fs.readFile(historyFile, 'utf-8');
+        return res.status(200).json(JSON.parse(history));
+      } catch {
+        return res.status(200).json([]);
       }
-
-      // Remove the template
-      templates.splice(templateIndex, 1);
-
-      await fs.writeFile(
-        path.join(userDir, 'templates.json'),
-        JSON.stringify(templates, null, 2)
-      );
-
-      res.json({ success: true });
     } catch (error) {
-      next(error);
+      console.error('History GET error:', error);
+      return next(error);
     }
 });
 
 // Error handling middleware
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error('Server error:', err);
   res.status(500).json({ 
     error: 'Server error', 
@@ -255,3 +315,5 @@ const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+export default app;

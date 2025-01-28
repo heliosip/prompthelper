@@ -1,0 +1,44 @@
+[
+  {
+    "templateId": "1",
+    "content": "Please analyze this task:\n[INSERT DETAILS]\n\nConsider:\n1. Requirements\n2. Potential challenges\n3. Implementation steps",
+    "timestamp": "2025-01-28T03:45:29.415Z",
+    "userId": "testuser",
+    "id": "auz7c3br5"
+  },
+  {
+    "templateId": "temp1",
+    "content": "This is a test template for prompting Claude",
+    "timestamp": "2025-01-28T03:45:41.909Z",
+    "userId": "testuser",
+    "id": "71yjykvk6"
+  },
+  {
+    "id": "493ishdmi",
+    "templateId": "2",
+    "content": "Please review this code:\n[INSERT CODE]\n\nFocus on:\n1. Performance\n2. Security\n3. Best practices",
+    "timestamp": "2025-01-28T13:49:43.510Z",
+    "userId": "testuser",
+    "metadata": {
+      "templateName": "Code Review",
+      "category": "Development",
+      "aiTool": "claude",
+      "outputType": "other",
+      "promptType": "other"
+    }
+  },
+  {
+    "id": "kan9gkler",
+    "templateId": "3",
+    "content": "Please write code for:\n[INSERT REQUIREMENT]\n\nRequirements:\n1. Language: [SPECIFY]\n2. Features: [LIST]\n3. Error handling needed: [YES/NO]",
+    "timestamp": "2025-01-28T13:49:51.737Z",
+    "userId": "testuser",
+    "metadata": {
+      "templateName": "Code Generation",
+      "category": "Development",
+      "aiTool": "claude",
+      "outputType": "other",
+      "promptType": "other"
+    }
+  }
+]

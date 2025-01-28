@@ -1,0 +1,116 @@
+[
+  {
+    "id": "temp1",
+    "name": "Test Template #1",
+    "content": "This is a test template for prompting Claude",
+    "category": "General",
+    "aiTool": "claude",
+    "isUserTemplate": true,
+    "userId": "testuser",
+    "createdAt": "2025-01-27T00:00:00.000Z",
+    "updatedAt": "2025-01-27T00:00:00.000Z"
+  },
+  {
+    "id": "temp2",
+    "name": "Test Template #2",
+    "content": "This is another test template for prompting Claude",
+    "category": "General",
+    "aiTool": "claude",
+    "isUserTemplate": true,
+    "userId": "testuser",
+    "createdAt": "2025-01-27T00:00:00.000Z",
+    "updatedAt": "2025-01-27T00:00:00.000Z"
+  },
+  {
+    "id": "9demgvqmm",
+    "name": "New Template",
+    "content": "New Template",
+    "category": "General",
+    "aiTool": "claude",
+    "isUserTemplate": true,
+    "userId": "testuser",
+    "createdAt": "2025-01-27T22:39:15.289Z",
+    "updatedAt": "2025-01-27T22:39:15.289Z"
+  },
+  {
+    "id": "1iibp1tq7",
+    "name": "New Template #5",
+    "content": "New template #5",
+    "category": "General",
+    "aiTool": "claude",
+    "isUserTemplate": true,
+    "userId": "testuser",
+    "createdAt": "2025-01-27T22:46:27.314Z",
+    "updatedAt": "2025-01-27T22:46:27.314Z"
+  },
+  {
+    "id": "wx6dj80wf",
+    "name": "Test Template 7",
+    "content": "Test Template 7",
+    "category": "General",
+    "aiTool": "claude",
+    "isUserTemplate": true,
+    "userId": "testuser",
+    "createdAt": "2025-01-27T22:47:42.172Z",
+    "updatedAt": "2025-01-27T22:47:42.172Z"
+  },
+  {
+    "id": "p2rzohc1v",
+    "name": "Test Template 8",
+    "content": "Test template 8",
+    "category": "General",
+    "aiTool": "claude",
+    "isUserTemplate": true,
+    "userId": "testuser",
+    "createdAt": "2025-01-27T22:49:15.516Z",
+    "updatedAt": "2025-01-27T22:49:15.516Z"
+  },
+  {
+    "id": "ovek0pgyl",
+    "name": "New Template 9",
+    "content": "New template nine",
+    "category": "General",
+    "aiTool": "claude",
+    "isUserTemplate": true,
+    "userId": "testuser",
+    "createdAt": "2025-01-28T00:30:01.014Z",
+    "updatedAt": "2025-01-28T00:30:01.014Z"
+  },
+  {
+    "id": "g7a1vuix3",
+    "name": "Test template 10",
+    "content": "Test template 10",
+    "category": "General",
+    "aiTool": "claude",
+    "isUserTemplate": true,
+    "userId": "testuser",
+    "createdAt": "2025-01-28T02:54:00.939Z",
+    "updatedAt": "2025-01-28T02:54:00.939Z"
+  },
+  {
+    "id": "4sbx3ne8e",
+    "name": "New Template 11",
+    "content": "This is a new template 11",
+    "category": "General",
+    "aiTool": "claude",
+    "outputType": "blog-post",
+    "promptType": "zero-shot",
+    "isUserTemplate": true,
+    "userId": "testuser",
+    "createdAt": "2025-01-28T04:46:40.356Z",
+    "updatedAt": "2025-01-28T04:46:40.356Z"
+  },
+  {
+    "id": "xydqs67ht",
+    "name": "New Template 12",
+    "content": "New template 12",
+    "category": "General",
+    "aiTool": "claude",
+    "outputType": "blog-post",
+    "promptType": "zero-shot",
+    "isUserTemplate": true,
+    "userId": "testuser",
+    "createdAt": "2025-01-28T13:42:37.172Z",
+    "updatedAt": "2025-01-28T13:42:37.172Z"
+  }
+]
