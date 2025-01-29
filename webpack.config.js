@@ -1,6 +1,9 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyPlugin = require('copy-webpack-plugin');
+const TerserPlugin = require('terser-webpack-plugin');
+const CompressionPlugin = require('compression-webpack-plugin');
+const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 
 module.exports = {
   entry: {
@@ -16,11 +19,19 @@ module.exports = {
   resolve: {
     extensions: ['.tsx', '.ts', '.js', '.jsx', '.json'],
     alias: {
-      '@': path.resolve(__dirname, 'src'), // Correct alias to `src/`
-      react: path.resolve(__dirname, 'node_modules/react'),
-      'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
+      '@': path.resolve(__dirname, 'src'),
     },
-    mainFields: ['browser', 'module', 'main'], // Ensures Webpack prioritizes browser-compatible modules
+    mainFields: ['module', 'main', 'browser'],
+    fallback: {
+      "stream": require.resolve("stream-browserify"),
+      "http": require.resolve("stream-http"),
+      "https": require.resolve("https-browserify"),
+      "url": require.resolve("url/"),
+      "zlib": require.resolve("browserify-zlib"),
+      "util": require.resolve("util/"),
+      "assert": require.resolve("assert/"),
+      "buffer": require.resolve("buffer/")
+    }
   },
   module: {
     rules: [
@@ -43,15 +54,29 @@ module.exports = {
     ],
   },
   optimization: {
-    usedExports: true,
-    minimize: true,
+    usedExports: true, // 🔥 Tree shaking: Removes unused exports
+    minimize: true, // 🔥 Minify JS output
+    minimizer: [
+      new TerserPlugin({
+        parallel: true,
+        terserOptions: {
+          compress: {
+            drop_console: true, // Removes console logs for production
+          },
+          output: {
+            comments: false, // Removes comments
+          },
+        },
+      }),
+    ],
     splitChunks: {
-      chunks: 'all',
+      chunks: 'all', // 🔥 Code Splitting: Extracts common dependencies
     },
   },
   externals: {
     react: 'React',
     'react-dom': 'ReactDOM',
+    '@supabase/supabase-js': 'Supabase',
   },
   plugins: [
     new HtmlWebpackPlugin({
@@ -65,7 +90,11 @@ module.exports = {
         { from: path.resolve(__dirname, 'src', 'assets'), to: 'assets', noErrorOnMissing: true },
       ],
     }),
+    new CompressionPlugin(), // 🔥 Enables Gzip compression
+    new BundleAnalyzerPlugin({
+      analyzerMode: process.env.ANALYZE ? 'server' : 'disabled',
+    }),
   ],
   mode: 'production',
-  devtool: process.env.NODE_ENV === 'production' ? false : 'inline-source-map',
+  devtool: false,
 };

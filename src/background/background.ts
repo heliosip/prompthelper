@@ -53,11 +53,10 @@ interface Template {
   });
   
   // Add message listener for template operations
-  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === 'getTemplates') {
-      chrome.storage.local.get(['templates'], (result) => {
-        sendResponse(result.templates || defaultTemplates);
-      });
+  chrome.runtime.onMessage.addListener(
+    (request: any, _sender: chrome.runtime.MessageSender, sendResponse: (response: any) => void) => {
+      console.log('Message received', request);
+      sendResponse({ received: true });
       return true;
     }
-  });
+  );

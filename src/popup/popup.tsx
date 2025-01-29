@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { supabase } from '../utils/supabaseClient';
 import AuthView from './AuthView';
 import TemplateEditor from '../components/TemplateEditor';
-import { Template, PromptHistory, PromptInstance } from '../types/template';
+import { Template, PromptHistory } from '../types/template';
 import { Box, Typography, Button, Tabs, Tab, CircularProgress } from '@mui/material';
 
 type TabType = 'templates' | 'custom' | 'history';
@@ -41,7 +41,7 @@ export const Popup: React.FC = () => {
           setUserEmail(null);
         }
       } catch (err) {
-        console.error('Error during session check:', err);
+        console.error('Error during session check:', error);
         setIsAuthenticated(false);
         setUserEmail(null);
       } finally {
@@ -71,8 +71,8 @@ export const Popup: React.FC = () => {
     try {
       const data = await chrome.storage.local.get(['templates']);
       setTemplates(data.templates || []);
-    } catch (err) {
-      console.error('Failed to load templates:', err);
+    } catch (error) {
+      console.error('Failed to load templates:', error);
       setError('Failed to load templates.');
     }
   }, []);
@@ -87,8 +87,8 @@ export const Popup: React.FC = () => {
       }
       const data = await response.json();
       setUserTemplates(data);
-    } catch (err) {
-      console.error('Failed to load user templates:', err);
+    } catch (error) {
+      console.error('Failed to load user templates:', error);
       setError('Failed to load user templates.');
     }
   }, [userEmail, isAuthenticated]);
@@ -101,8 +101,8 @@ export const Popup: React.FC = () => {
       }
       const data = await response.json();
       setPrompts(data);
-    } catch (err) {
-      console.error('Failed to load history:', err);
+    } catch (error) {
+      console.error('Failed to load history:', error);
       setError('Failed to load history.');
     }
   }, [userEmail]);
@@ -151,7 +151,7 @@ export const Popup: React.FC = () => {
       </Button>
       <Tabs
         value={activeTab}
-        onChange={(e, newValue) => setActiveTab(newValue)}
+        onChange={(_e, newValue) => setActiveTab(newValue)}
         textColor="primary"
         indicatorColor="primary"
         sx={{ marginBottom: 2 }}

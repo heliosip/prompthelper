@@ -31,8 +31,10 @@ const insertText = (input: HTMLElement, text: string): void => {
 };
 
 // Handle the message from popup
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener(
+  (request: any, _sender: chrome.runtime.MessageSender, sendResponse: (response: any) => void) => {
   console.log('Message received in content script:', request);
+  sendResponse({ received: true });
 
   if (request.action === 'insertPrompt') {
     try {
