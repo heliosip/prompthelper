@@ -2,15 +2,19 @@
   "name": "prompthelper-server",
   "version": "1.0.0",
   "main": "index.ts",
+  "sideEffects": false,
+
   "scripts": {
     "start": "node dist/index.js",
     "dev": "nodemon --exec ts-node index.ts",
-    "build": "tsc",
+    "build": "webpack --mode production && tsc",
     "test": "ts-node test/server.test.ts",
     "test:watch": "nodemon --exec ts-node test/server.test.ts",
     "lint": "eslint . --ext .ts",
-    "lint:fix": "eslint . --ext .ts --fix"
+    "lint:fix": "eslint . --ext .ts --fix",
+    "analyze": "ANALYZE=1 webpack --mode production"
   },
+
   "keywords": [
     "express",
     "typescript",
@@ -18,13 +22,17 @@
   ],
   "author": "",
   "license": "ISC",
+
   "dependencies": {
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "fs-extra": "^11.2.0",
-    "joi": "^17.13.3"
+    "joi": "^17.13.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
+
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
     "@types/cors": "^2.8.17",
@@ -36,6 +44,14 @@
     "eslint": "^8.56.0",
     "nodemon": "^3.1.9",
     "ts-node": "^10.9.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "webpack": "^5.88.2",
+    "webpack-cli": "^5.1.4",
+    "webpack-bundle-analyzer": "^4.9.0"
+  },
+
+  "browser": {
+    "react": "./node_modules/react",
+    "react-dom": "./node_modules/react-dom"
   }
 }

@@ -1,3 +1,5 @@
+/// <reference types="chrome" />
+
 console.log('AI Prompt Helper content script loading...');
 
 // Function to find the input element

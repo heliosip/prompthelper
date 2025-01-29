@@ -1,3 +1,5 @@
+/// <reference types="chrome"/>
+
 // Template interface
 interface Template {
     id: string;
