@@ -1,36 +1,37 @@
 {
   "compilerOptions": {
-    "jsx": "react-jsx",
     "target": "ES2022",
     "module": "ESNext",
-    "rootDir": ".", 
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "rootDir": ".",
     "outDir": "./dist",
     "strict": true,
+    "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node",
-    "jsxImportSource": "react",
     "resolveJsonModule": true,
     "allowJs": true,
     "isolatedModules": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
     "noImplicitAny": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "incremental": true,
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
     },
-    "allowSyntheticDefaultImports": true,
-    "types": ["node"],
-    "lib": ["DOM", "ES2022"],
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
-    "incremental": true
+    "types": ["vite/client", "node"],
+    "lib": ["DOM", "ES2022"]
   },
   "include": [
     "src/**/*",
-    "server/**/*"
+    "server/**/*",
+    "vite.config.ts"
   ],
   "exclude": [
     "node_modules",
