@@ -1,29 +1,44 @@
-import React, { useState } from 'react';
-import { Template, PromptInstance, createPromptInstance } from '../types/template';  // Fixed import path
+// src/popup/TemplateEditor.tsx
 
-// Rest of the component remains the same
+import React, { useState } from 'react';
+import { Template, PromptInstance, createPromptInstance } from '../types/template';
+import { useTemplateActions } from '../hooks/useTemplateActions';
+
 interface TemplateEditorProps {
   template: Template;
   onSubmit: (promptInstance: PromptInstance) => void;
   onCancel: () => void;
 }
 
-const TemplateEditor: React.FC<TemplateEditorProps> = ({
-  template,
-  onSubmit,
-  onCancel
-}) => {
+const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSubmit, onCancel }) => {
+  // Local state for the content and the save-to-history flag.
   const [content, setContent] = useState(template.content);
   const [saveToHistory, setSaveToHistory] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
+  // Extract the update function from our custom hook.
+  const { update } = useTemplateActions();
+
+  // Handler to create a prompt instance and submit it.
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const promptInstance = createPromptInstance(
-      template,
-      content,
-      saveToHistory
-    );
+    const promptInstance = createPromptInstance(template, content, saveToHistory);
     onSubmit(promptInstance);
+  };
+
+  // Handler to save the updated template via Supabase.
+  const handleSaveTemplate = async () => {
+    setIsSaving(true);
+    try {
+      // Update the template with the new content.
+      const updatedTemplate = await update(template.id, { content });
+      console.log('Template saved:', updatedTemplate);
+      // Optionally, you could provide a success notification or update local state.
+    } catch (error) {
+      console.error('Failed to save template:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -45,9 +60,7 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
       {/* Prompt Content Editor */}
       <form onSubmit={handleSubmit}>
         <div className="mb-4">
-          <label className="block mb-2 font-medium">
-            Prompt Content
-          </label>
+          <label className="block mb-2 font-medium">Prompt Content</label>
           <textarea
             className="w-full h-64 p-3 border rounded font-mono"
             value={content}
@@ -83,6 +96,14 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
             className="px-4 py-2 bg-blue-500 text-white rounded"
           >
             Send to Chat
+          </button>
+          <button
+            type="button"
+            onClick={handleSaveTemplate}
+            disabled={isSaving}
+            className="px-4 py-2 bg-green-500 text-white rounded"
+          >
+            {isSaving ? 'Saving...' : 'Save Template'}
           </button>
         </div>
       </form>

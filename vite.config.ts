@@ -1,3 +1,5 @@
+// vite.config.ts
+
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
@@ -65,7 +67,13 @@ export default defineConfig(({ mode }) => ({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src'), // ✅ Ensures correct alias resolution
+      // Use "@" as an alias for the "src" directory.
+      '@': path.resolve(__dirname, 'src'),
+      // Additional aliases for convenience:
+      'hooks': path.resolve(__dirname, 'src/hooks'),
+      'components': path.resolve(__dirname, 'src/components'),
+      'types': path.resolve(__dirname, 'src/types'),
+      'database.types': path.resolve(__dirname, 'src/database.types'),
     }
   },
   server: {
