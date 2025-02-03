@@ -1,7 +1,7 @@
 // src/api/templates.ts
 
 import { supabase } from '../supabaseClient';
-import type { Template } from '../database.types';
+import type { Template } from '../types/database.types';
 
 // Create a new template
 export const createTemplate = async (template: Partial<Template>) => {

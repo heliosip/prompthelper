@@ -1,4 +1,4 @@
-const t=[{id:"1",name:"Task Analysis",content:`Please analyze this task:
+(function(){"use strict";const a=[{id:"1",name:"Task Analysis",content:`Please analyze this task:
 [INSERT DETAILS]
 
 Consider:
@@ -22,4 +22,4 @@ Requirements:
 Provide:
 1. Key patterns
 2. Statistical insights
-3. Recommendations`,category:"Analysis",aiTool:"claude"}];chrome.runtime.onInstalled.addListener(()=>{chrome.storage.local.set({templates:t})});chrome.storage.onChanged.addListener((e,n)=>{n==="local"&&e.templates&&console.log("Templates updated:",e.templates.newValue)});chrome.runtime.onMessage.addListener((e,n,a)=>(console.log("Message received",e),a({received:!0}),!0));
+3. Recommendations`,category:"Analysis",aiTool:"claude"}];chrome.runtime.onInstalled.addListener(()=>{chrome.storage.local.set({templates:a})}),chrome.storage.onChanged.addListener((e,n)=>{n==="local"&&e.templates&&console.log("Templates updated:",e.templates.newValue)}),chrome.runtime.onMessage.addListener((e,n,t)=>(console.log("Message received",e),t({received:!0}),!0))})();

@@ -1,7 +1,7 @@
 // src/supabaseClient.ts
 
 import { createClient } from '@supabase/supabase-js';
-import type { Database } from './database.types';
+import type { Database } from './types/database.types';
 
 // Use Vite environment variables (ensure these are set in your .env file)
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;

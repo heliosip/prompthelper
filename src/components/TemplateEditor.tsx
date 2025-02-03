@@ -1,47 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Box,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Button,
-  Typography,
-  Slider,
-  Alert,
-  CircularProgress
+  Box, TextField, Select, MenuItem, FormControl,
+  InputLabel, Button, Typography, Slider, Alert, CircularProgress
 } from '@mui/material';
-import { templateService, type TemplateWithSettings } from '@/services';
-import type { AIModel } from '@/types/database.types';
-
-// Rest of the component code remains the same...
+import { templateService } from '@/services/templateService';
+import type { Template } from '@/types/template';
+// Define AIModel type if it doesn't exist in the module
+interface AIModel {
+  id: string;
+  name: string;
+  provider: string;
+}
 
 interface TemplateEditorProps {
-  template: TemplateWithSettings;
-  onSave: (template: TemplateWithSettings) => void;
+  template: Template;
+  onSubmit: (content: string) => void;
   onCancel: () => void;
 }
 
-const TemplateEditor: React.FC<TemplateEditorProps> = ({
-  template,
-  onSave,
-  onCancel
-}) => {
-  // Form state
+const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSubmit, onCancel }) => {
   const [formData, setFormData] = useState({
-    name: template.name,
     content: template.content,
-    description: template.description || '',
     ai_model_id: template.ai_model_id || '',
     settings: {
-      temperature: template.settings?.temperature || 0.7,
-      tone: template.settings?.tone || 'professional',
-      style: template.settings?.style || 'concise'
+      temperature: 0.7,
+      tone: 'professional',
+      style: 'concise'
     }
   });
 
-  // UI state
   const [aiModels, setAIModels] = useState<AIModel[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,41 +48,26 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
 
   const handleChange = (field: string, value: any) => {
     if (field.startsWith('settings.')) {
-      const settingField = field.split('.')[1];
+      const settingField: string = field.split('.')[1] || '';
       setFormData(prev => ({
         ...prev,
-        settings: {
-          ...prev.settings,
-          [settingField]: value
-        }
+        settings: { ...prev.settings, [settingField]: value }
       }));
     } else {
-      setFormData(prev => ({
-        ...prev,
-        [field]: value
-      }));
+      setFormData(prev => ({ ...prev, [field]: value }));
     }
   };
 
-  const handleSave = async () => {
+  const handleSubmit = async () => {
     setLoading(true);
-    setError(null);
-
     try {
-      const updatedTemplate = await templateService.updateTemplate(
-        template.id,
-        {
-          name: formData.name,
-          content: formData.content,
-          description: formData.description,
-          ai_model_id: formData.ai_model_id
-        },
+      const finalContent = await templateService.processTemplate(
+        formData.content,
         formData.settings
       );
-
-      onSave(updatedTemplate);
+      onSubmit(finalContent);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save template');
+      setError(err instanceof Error ? err.message : 'Failed to process template');
     } finally {
       setLoading(false);
     }
@@ -103,29 +75,7 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
 
   return (
     <Box className="space-y-4 p-4">
-      {error && (
-        <Alert severity="error" className="mb-4">
-          {error}
-        </Alert>
-      )}
-
-      <TextField
-        fullWidth
-        label="Template Name"
-        value={formData.name}
-        onChange={(e) => handleChange('name', e.target.value)}
-        disabled={loading}
-      />
-
-      <TextField
-        fullWidth
-        label="Description"
-        value={formData.description}
-        onChange={(e) => handleChange('description', e.target.value)}
-        disabled={loading}
-        multiline
-        rows={2}
-      />
+      {error && <Alert severity="error" className="mb-4">{error}</Alert>}
 
       <FormControl fullWidth>
         <InputLabel>AI Model</InputLabel>
@@ -143,15 +93,11 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
       </FormControl>
 
       <Box>
-        <Typography gutterBottom>
-          Temperature: {formData.settings.temperature}
-        </Typography>
+        <Typography gutterBottom>Temperature: {formData.settings.temperature}</Typography>
         <Slider
           value={formData.settings.temperature}
           onChange={(_e, value) => handleChange('settings.temperature', value)}
-          min={0}
-          max={1}
-          step={0.1}
+          min={0} max={1} step={0.1}
           disabled={loading}
         />
       </Box>
@@ -188,29 +134,21 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
 
       <TextField
         fullWidth
+        multiline
+        rows={6}
         label="Prompt Content"
         value={formData.content}
         onChange={(e) => handleChange('content', e.target.value)}
         disabled={loading}
-        multiline
-        rows={6}
         className="font-mono"
       />
 
       <Box className="flex justify-end space-x-2">
-        <Button
-          variant="outlined"
-          onClick={onCancel}
-          disabled={loading}
-        >
+        <Button variant="outlined" onClick={onCancel} disabled={loading}>
           Cancel
         </Button>
-        <Button
-          variant="contained"
-          onClick={handleSave}
-          disabled={loading}
-        >
-          {loading ? <CircularProgress size={24} /> : 'Save Template'}
+        <Button variant="contained" onClick={handleSubmit} disabled={loading}>
+          {loading ? <CircularProgress size={24} /> : 'Insert Prompt'}
         </Button>
       </Box>
     </Box>
