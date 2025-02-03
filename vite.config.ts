@@ -1,5 +1,3 @@
-// vite.config.ts
-
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
@@ -9,76 +7,133 @@ import compression from 'vite-plugin-compression';
 
 export default defineConfig(({ mode }) => ({
   plugins: [
-    react(),
-
-    // ✅ Static file copy (Ensures manifest, assets, and popup.html are copied)
-    viteStaticCopy({
-      targets: [
-        { src: 'src/manifest.json', dest: '' },
-        { src: 'src/assets', dest: 'assets' },
-        { src: 'src/popup/popup.html', dest: '' } // ✅ Ensures popup.html is copied
-      ],
+    react({
+      jsxImportSource: '@emotion/react',
+      babel: {
+        plugins: ['@emotion/babel-plugin']
+      }
     }),
 
-    // ✅ Apply compression only in production
-    ...(mode === 'production'
-      ? [
-          compression({ algorithm: 'gzip', threshold: 1024 }),
-          compression({ algorithm: 'brotliCompress', threshold: 1024 })
-        ]
-      : []),
-
-    // ✅ PWA Support (Ensures it doesn't break in non-browser environments)
+    // PWA Configuration
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
         name: "AI Prompt Helper",
         short_name: "PromptHelper",
         description: "AI Prompt Management Tool",
-        theme_color: "#ffffff",
+        theme_color: "#4F46E5",
+        background_color: "#ffffff",
+        display: "standalone",
         icons: [
-          { src: "/icon-192x192.png", sizes: "192x192", type: "image/png" },
-          { src: "/icon-512x512.png", sizes: "512x512", type: "image/png" }
+          { src: "/assets/icons/icon-16.png", sizes: "16x16", type: "image/png" },
+          { src: "/assets/icons/icon-32.png", sizes: "32x32", type: "image/png" },
+          { src: "/assets/icons/icon-48.png", sizes: "48x48", type: "image/png" },
+          { src: "/assets/icons/icon-128.png", sizes: "128x128", type: "image/png" }
         ]
       }
-    })
+    }),
+
+    // Static Asset Copy
+    viteStaticCopy({
+      targets: [
+        { 
+          src: 'src/manifest.json',
+          dest: '' 
+        },
+        { 
+          src: 'src/assets/icons/*',
+          dest: 'assets/icons' 
+        },
+        { 
+          src: 'src/assets/images/*',
+          dest: 'assets/images' 
+        },
+        { 
+          src: 'src/assets/styles/*',
+          dest: 'assets/styles' 
+        },
+        { 
+          src: 'src/popup/popup.html',
+          dest: '' 
+        }
+      ]
+    }),
+
+    // Compression for production
+    ...(mode === 'production'
+      ? [
+          compression({ algorithm: 'gzip', ext: '.gz' }),
+          compression({ algorithm: 'brotliCompress', ext: '.br' })
+        ]
+      : [])
   ],
+
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+      'components': path.resolve(__dirname, './src/components'),
+      'hooks': path.resolve(__dirname, './src/hooks'),
+      'services': path.resolve(__dirname, './src/services'),
+      'utils': path.resolve(__dirname, './src/utils'),
+      'types': path.resolve(__dirname, './src/types'),
+      'assets': path.resolve(__dirname, './src/assets')
+    }
+  },
+
+  css: {
+    modules: {
+      localsConvention: 'camelCase'
+    },
+    preprocessorOptions: {
+      less: {
+        javascriptEnabled: true
+      }
+    }
+  },
+
   build: {
     outDir: 'dist',
     emptyOutDir: true,
-    sourcemap: mode === 'production' ? false : 'inline',
+    sourcemap: mode === 'development',
+    minify: mode === 'production' ? 'terser' : false,
+    terserOptions: mode === 'production' ? {
+      compress: {
+        drop_console: true,
+        drop_debugger: true
+      }
+    } : undefined,
     rollupOptions: {
       input: {
-        popup: path.resolve(__dirname, 'src/popup/popup.html'), // ✅ Ensures correct path for popup
+        popup: path.resolve(__dirname, 'src/popup/popup.html'),
         content: path.resolve(__dirname, 'src/content/content.ts'),
         background: path.resolve(__dirname, 'src/background/background.ts'),
       },
       output: {
         entryFileNames: '[name].js',
         chunkFileNames: 'chunks/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash][extname]',
+        assetFileNames: (assetInfo) => {
+          const info = (assetInfo.name ?? '').split('.');
+          if (/\.(png|jpe?g|svg|gif|tiff|bmp|ico)$/i.test(assetInfo.name ?? '')) {
+            return `assets/images/[name]-[hash][extname]`;
+          }
+          if (assetInfo.name && /\.css$/i.test(assetInfo.name)) {
+            return `assets/styles/[name]-[hash][extname]`;
+          }
+          return `assets/[name]-[hash][extname]`;
+        }
       }
-    },
-    minify: 'terser',
-    terserOptions: {
-      compress: { drop_console: true },
-      output: { comments: false },
     }
   },
-  resolve: {
-    alias: {
-      // Use "@" as an alias for the "src" directory.
-      '@': path.resolve(__dirname, 'src'),
-      // Additional aliases for convenience:
-      'hooks': path.resolve(__dirname, 'src/hooks'),
-      'components': path.resolve(__dirname, 'src/components'),
-      'types': path.resolve(__dirname, 'src/types'),
-      'database.types': path.resolve(__dirname, 'src/database.types'),
-    }
-  },
+
   server: {
-    port: 3000,
+    port: 3001,
     strictPort: true,
-    open: true,
+    watch: {
+      ignored: ['**/dist/**']
+    }
+  },
+
+  optimizeDeps: {
+    include: ['@emotion/react', '@emotion/styled', '@mui/material']
   }
 }));

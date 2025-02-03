@@ -1,5 +1,5 @@
-// src/popup/AuthView.tsx
 import React, { useState } from 'react';
+import { Box, TextField, Button, Typography, Alert, CircularProgress } from '@mui/material';
 import { supabase } from '../utils/supabaseClient';
 
 interface AuthViewProps {
@@ -7,93 +7,136 @@ interface AuthViewProps {
 }
 
 const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
+  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [username, setUsername] = useState(''); // optional: for storing in "profile"
-  const [errorMsg, setErrorMsg] = useState('');
+  const [username, setUsername] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // SIGN UP
-  const handleSignUp = async () => {
-    setErrorMsg('');
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccessMessage(null);
+    setLoading(true);
 
-    // 1) Create user via Supabase Auth
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-    if (signUpError) {
-      setErrorMsg(signUpError.message);
-      return;
-    }
+    try {
+      if (isSignUp) {
+        // Sign Up
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              username: username
+            }
+          }
+        });
 
-    // 2) Insert into 'profile' table if sign-up succeeded
-    //    (the user's ID is signUpData.user?.id)
-    const userId = signUpData.user?.id;
-    if (!userId) {
-      // handle missing userId error
-      return;
-    }
-    const { error: profileError } = await supabase.from('profile').insert([
-      {
-        id: userId,
-        username, // store the username
+        if (signUpError) throw signUpError;
+
+        if (signUpData.user) {
+          setSuccessMessage('Registration successful! Please check your email for verification.');
+          // Don't call onAuthSuccess yet - wait for email verification
+        }
+      } else {
+        // Sign In
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+
+        if (signInError) throw signInError;
+
+        if (signInData.user) {
+          onAuthSuccess();
+        }
       }
-    ]);
-    if (profileError) {
-      setErrorMsg(profileError.message);
-      return;
+    } catch (err: any) {
+      setError(err.message || 'An error occurred during authentication');
+    } finally {
+      setLoading(false);
     }
-
-    onAuthSuccess();
-  };
-
-  // SIGN IN
-  const handleSignIn = async () => {
-    setErrorMsg('');
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      setErrorMsg(error.message);
-      return;
-    }
-    onAuthSuccess();
   };
 
   return (
-    <div style={{ padding: '8px' }}>
-      <h3>Sign In / Sign Up</h3>
-      {errorMsg && <p style={{ color: 'red' }}>{errorMsg}</p>}
+    <Box className="w-full max-w-md p-6">
+      <Typography variant="h5" className="mb-6 text-center">
+        {isSignUp ? 'Create Account' : 'Welcome Back'}
+      </Typography>
 
-      <input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={e => setEmail(e.target.value)}
-        style={{ width: '100%', marginBottom: '8px' }}
-      />
-      <input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={e => setPassword(e.target.value)}
-        style={{ width: '100%', marginBottom: '8px' }}
-      />
-      <input
-        type="text"
-        placeholder="Username (optional)"
-        value={username}
-        onChange={e => setUsername(e.target.value)}
-        style={{ width: '100%', marginBottom: '8px' }}
-      />
+      {error && (
+        <Alert severity="error" className="mb-4">
+          {error}
+        </Alert>
+      )}
 
-      <div>
-        <button onClick={handleSignIn} style={{ marginRight: '8px' }}>
-          Sign In
-        </button>
-        <button onClick={handleSignUp}>
-          Sign Up
-        </button>
-      </div>
-    </div>
+      {successMessage && (
+        <Alert severity="success" className="mb-4">
+          {successMessage}
+        </Alert>
+      )}
+
+      <form onSubmit={handleAuth} className="space-y-4">
+        {isSignUp && (
+          <TextField
+            fullWidth
+            label="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            disabled={loading}
+            required
+          />
+        )}
+
+        <TextField
+          fullWidth
+          type="email"
+          label="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          disabled={loading}
+          required
+        />
+
+        <TextField
+          fullWidth
+          type="password"
+          label="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          disabled={loading}
+          required
+        />
+
+        <Button
+          type="submit"
+          fullWidth
+          variant="contained"
+          color="primary"
+          disabled={loading}
+          className="h-12"
+        >
+          {loading ? (
+            <CircularProgress size={24} />
+          ) : (
+            isSignUp ? 'Sign Up' : 'Sign In'
+          )}
+        </Button>
+
+        <Button
+          fullWidth
+          variant="text"
+          onClick={() => setIsSignUp(!isSignUp)}
+          disabled={loading}
+        >
+          {isSignUp
+            ? 'Already have an account? Sign In'
+            : "Don't have an account? Sign Up"}
+        </Button>
+      </form>
+    </Box>
   );
 };
 

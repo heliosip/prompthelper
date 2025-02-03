@@ -1,113 +1,219 @@
-// src/popup/TemplateEditor.tsx
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Button,
+  Typography,
+  Slider,
+  Alert,
+  CircularProgress
+} from '@mui/material';
+import { templateService, type TemplateWithSettings } from '@/services';
+import type { AIModel } from '@/types/database.types';
 
-import React, { useState } from 'react';
-import { Template, PromptInstance, createPromptInstance } from '../types/template';
-import { useTemplateActions } from '../hooks/useTemplateActions';
+// Rest of the component code remains the same...
 
 interface TemplateEditorProps {
-  template: Template;
-  onSubmit: (promptInstance: PromptInstance) => void;
+  template: TemplateWithSettings;
+  onSave: (template: TemplateWithSettings) => void;
   onCancel: () => void;
 }
 
-const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSubmit, onCancel }) => {
-  // Local state for the content and the save-to-history flag.
-  const [content, setContent] = useState(template.content);
-  const [saveToHistory, setSaveToHistory] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+const TemplateEditor: React.FC<TemplateEditorProps> = ({
+  template,
+  onSave,
+  onCancel
+}) => {
+  // Form state
+  const [formData, setFormData] = useState({
+    name: template.name,
+    content: template.content,
+    description: template.description || '',
+    ai_model_id: template.ai_model_id || '',
+    settings: {
+      temperature: template.settings?.temperature || 0.7,
+      tone: template.settings?.tone || 'professional',
+      style: template.settings?.style || 'concise'
+    }
+  });
 
-  // Extract the update function from our custom hook.
-  const { update } = useTemplateActions();
+  // UI state
+  const [aiModels, setAIModels] = useState<AIModel[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Handler to create a prompt instance and submit it.
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const promptInstance = createPromptInstance(template, content, saveToHistory);
-    onSubmit(promptInstance);
+  useEffect(() => {
+    loadAIModels();
+  }, []);
+
+  const loadAIModels = async () => {
+    try {
+      const models = await templateService.getAIModels();
+      setAIModels(models);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load AI models');
+    }
   };
 
-  // Handler to save the updated template via Supabase.
-  const handleSaveTemplate = async () => {
-    setIsSaving(true);
+  const handleChange = (field: string, value: any) => {
+    if (field.startsWith('settings.')) {
+      const settingField = field.split('.')[1];
+      setFormData(prev => ({
+        ...prev,
+        settings: {
+          ...prev.settings,
+          [settingField]: value
+        }
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    }
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
+    setError(null);
+
     try {
-      // Update the template with the new content.
-      const updatedTemplate = await update(template.id, { content });
-      console.log('Template saved:', updatedTemplate);
-      // Optionally, you could provide a success notification or update local state.
-    } catch (error) {
-      console.error('Failed to save template:', error);
+      const updatedTemplate = await templateService.updateTemplate(
+        template.id,
+        {
+          name: formData.name,
+          content: formData.content,
+          description: formData.description,
+          ai_model_id: formData.ai_model_id
+        },
+        formData.settings
+      );
+
+      onSave(updatedTemplate);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save template');
     } finally {
-      setIsSaving(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="p-4 border rounded">
-      {/* Template Metadata Display */}
-      <div className="mb-4 p-3 bg-gray-50 rounded">
-        <h3 className="text-lg font-semibold">{template.name}</h3>
-        <div className="grid grid-cols-2 gap-2 text-sm mt-2">
-          <div>Category: {template.category}</div>
-          <div>AI Tool: {template.aiTool}</div>
-          <div>Output Type: {template.outputType}</div>
-          <div>Prompt Type: {template.promptType}</div>
-        </div>
-        {template.description && (
-          <div className="mt-2 text-gray-600">{template.description}</div>
-        )}
-      </div>
+    <Box className="space-y-4 p-4">
+      {error && (
+        <Alert severity="error" className="mb-4">
+          {error}
+        </Alert>
+      )}
 
-      {/* Prompt Content Editor */}
-      <form onSubmit={handleSubmit}>
-        <div className="mb-4">
-          <label className="block mb-2 font-medium">Prompt Content</label>
-          <textarea
-            className="w-full h-64 p-3 border rounded font-mono"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="Edit your prompt here..."
-          />
-        </div>
+      <TextField
+        fullWidth
+        label="Template Name"
+        value={formData.name}
+        onChange={(e) => handleChange('name', e.target.value)}
+        disabled={loading}
+      />
 
-        {/* Save to History Option */}
-        <div className="mb-4">
-          <label className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              checked={saveToHistory}
-              onChange={(e) => setSaveToHistory(e.target.checked)}
-              className="form-checkbox"
-            />
-            <span>Save this prompt to history</span>
-          </label>
-        </div>
+      <TextField
+        fullWidth
+        label="Description"
+        value={formData.description}
+        onChange={(e) => handleChange('description', e.target.value)}
+        disabled={loading}
+        multiline
+        rows={2}
+      />
 
-        {/* Action Buttons */}
-        <div className="flex justify-end space-x-2">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2 border rounded"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="px-4 py-2 bg-blue-500 text-white rounded"
-          >
-            Send to Chat
-          </button>
-          <button
-            type="button"
-            onClick={handleSaveTemplate}
-            disabled={isSaving}
-            className="px-4 py-2 bg-green-500 text-white rounded"
-          >
-            {isSaving ? 'Saving...' : 'Save Template'}
-          </button>
-        </div>
-      </form>
-    </div>
+      <FormControl fullWidth>
+        <InputLabel>AI Model</InputLabel>
+        <Select
+          value={formData.ai_model_id}
+          onChange={(e) => handleChange('ai_model_id', e.target.value)}
+          disabled={loading}
+        >
+          {aiModels.map((model) => (
+            <MenuItem key={model.id} value={model.id}>
+              {model.name} - {model.provider}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      <Box>
+        <Typography gutterBottom>
+          Temperature: {formData.settings.temperature}
+        </Typography>
+        <Slider
+          value={formData.settings.temperature}
+          onChange={(_e, value) => handleChange('settings.temperature', value)}
+          min={0}
+          max={1}
+          step={0.1}
+          disabled={loading}
+        />
+      </Box>
+
+      <FormControl fullWidth>
+        <InputLabel>Tone</InputLabel>
+        <Select
+          value={formData.settings.tone}
+          onChange={(e) => handleChange('settings.tone', e.target.value)}
+          disabled={loading}
+        >
+          <MenuItem value="professional">Professional</MenuItem>
+          <MenuItem value="casual">Casual</MenuItem>
+          <MenuItem value="academic">Academic</MenuItem>
+          <MenuItem value="friendly">Friendly</MenuItem>
+          <MenuItem value="technical">Technical</MenuItem>
+        </Select>
+      </FormControl>
+
+      <FormControl fullWidth>
+        <InputLabel>Style</InputLabel>
+        <Select
+          value={formData.settings.style}
+          onChange={(e) => handleChange('settings.style', e.target.value)}
+          disabled={loading}
+        >
+          <MenuItem value="concise">Concise</MenuItem>
+          <MenuItem value="descriptive">Descriptive</MenuItem>
+          <MenuItem value="analytical">Analytical</MenuItem>
+          <MenuItem value="creative">Creative</MenuItem>
+          <MenuItem value="instructional">Instructional</MenuItem>
+        </Select>
+      </FormControl>
+
+      <TextField
+        fullWidth
+        label="Prompt Content"
+        value={formData.content}
+        onChange={(e) => handleChange('content', e.target.value)}
+        disabled={loading}
+        multiline
+        rows={6}
+        className="font-mono"
+      />
+
+      <Box className="flex justify-end space-x-2">
+        <Button
+          variant="outlined"
+          onClick={onCancel}
+          disabled={loading}
+        >
+          Cancel
+        </Button>
+        <Button
+          variant="contained"
+          onClick={handleSave}
+          disabled={loading}
+        >
+          {loading ? <CircularProgress size={24} /> : 'Save Template'}
+        </Button>
+      </Box>
+    </Box>
   );
 };
 
