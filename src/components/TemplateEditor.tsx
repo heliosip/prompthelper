@@ -1,157 +1,145 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
-  Box, TextField, Select, MenuItem, FormControl,
-  InputLabel, Button, Typography, Slider, Alert, CircularProgress
+  Box,
+  TextField,
+  Button,
+  Typography,
+  Card,
+  CardContent,
+  CardActions,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Stack
 } from '@mui/material';
-import { templateService } from '@/services/templateService';
-import type { Template } from '@/types/template';
-// Define AIModel type if it doesn't exist in the module
-interface AIModel {
-  id: string;
-  name: string;
-  provider: string;
-}
+import type { Template } from '../types/template';
 
 interface TemplateEditorProps {
-  template: Template;
-  onSubmit: (content: string) => void;
+  template: Template | null | undefined;  // Updated type here
+  onSave: (template: Omit<Template, 'id'>) => void;
   onCancel: () => void;
 }
 
-const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSubmit, onCancel }) => {
-  const [formData, setFormData] = useState({
-    content: template.content,
-    ai_model_id: template.ai_model_id || '',
-    settings: {
-      temperature: 0.7,
-      tone: 'professional',
-      style: 'concise'
-    }
-  });
+const CATEGORIES = ['Planning', 'Development', 'Analysis', 'General'];
+const VARIABLE_TYPES = ['TEXT', 'CODE', 'NUMBER', 'DATE'];
 
-  const [aiModels, setAIModels] = useState<AIModel[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+const TemplateEditor: React.FC<TemplateEditorProps> = ({
+  template,
+  onSave,
+  onCancel
+}) => {
+  const [name, setName] = useState(template?.name || '');
+  const [description, setDescription] = useState(template?.description || '');
+  const [content, setContent] = useState(template?.content || '');
+  const [category, setCategory] = useState(template?.category || 'General');
+  const [selectedVariable, setSelectedVariable] = useState('TEXT');
 
-  useEffect(() => {
-    loadAIModels();
-  }, []);
-
-  const loadAIModels = async () => {
-    try {
-      const models = await templateService.getAIModels();
-      setAIModels(models);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load AI models');
-    }
+  const insertVariable = () => {
+    const variable = `[${selectedVariable}]`;
+    setContent((prev) => prev + variable);
   };
 
-  const handleChange = (field: string, value: any) => {
-    if (field.startsWith('settings.')) {
-      const settingField: string = field.split('.')[1] || '';
-      setFormData(prev => ({
-        ...prev,
-        settings: { ...prev.settings, [settingField]: value }
-      }));
-    } else {
-      setFormData(prev => ({ ...prev, [field]: value }));
-    }
-  };
-
-  const handleSubmit = async () => {
-    setLoading(true);
-    try {
-      const finalContent = await templateService.processTemplate(
-        formData.content,
-        formData.settings
-      );
-      onSubmit(finalContent);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to process template');
-    } finally {
-      setLoading(false);
-    }
+  const handleSave = () => {
+    onSave({
+      name,
+      description,
+      content,
+      category
+    });
   };
 
   return (
-    <Box className="space-y-4 p-4">
-      {error && <Alert severity="error" className="mb-4">{error}</Alert>}
+    <Card>
+      <CardContent>
+        <Typography variant="h6" gutterBottom>
+          {template ? 'Edit Template' : 'New Template'}
+        </Typography>
 
-      <FormControl fullWidth>
-        <InputLabel>AI Model</InputLabel>
-        <Select
-          value={formData.ai_model_id}
-          onChange={(e) => handleChange('ai_model_id', e.target.value)}
-          disabled={loading}
-        >
-          {aiModels.map((model) => (
-            <MenuItem key={model.id} value={model.id}>
-              {model.name} - {model.provider}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+        <Stack spacing={2}>
+          <TextField
+            fullWidth
+            label="Template Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
 
-      <Box>
-        <Typography gutterBottom>Temperature: {formData.settings.temperature}</Typography>
-        <Slider
-          value={formData.settings.temperature}
-          onChange={(_e, value) => handleChange('settings.temperature', value)}
-          min={0} max={1} step={0.1}
-          disabled={loading}
-        />
-      </Box>
+          <TextField
+            fullWidth
+            label="Description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            multiline
+            rows={2}
+          />
 
-      <FormControl fullWidth>
-        <InputLabel>Tone</InputLabel>
-        <Select
-          value={formData.settings.tone}
-          onChange={(e) => handleChange('settings.tone', e.target.value)}
-          disabled={loading}
-        >
-          <MenuItem value="professional">Professional</MenuItem>
-          <MenuItem value="casual">Casual</MenuItem>
-          <MenuItem value="academic">Academic</MenuItem>
-          <MenuItem value="friendly">Friendly</MenuItem>
-          <MenuItem value="technical">Technical</MenuItem>
-        </Select>
-      </FormControl>
+          <FormControl fullWidth>
+            <InputLabel>Category</InputLabel>
+            <Select
+              value={category}
+              label="Category"
+              onChange={(e) => setCategory(e.target.value)}
+            >
+              {CATEGORIES.map((cat) => (
+                <MenuItem key={cat} value={cat}>{cat}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-      <FormControl fullWidth>
-        <InputLabel>Style</InputLabel>
-        <Select
-          value={formData.settings.style}
-          onChange={(e) => handleChange('settings.style', e.target.value)}
-          disabled={loading}
-        >
-          <MenuItem value="concise">Concise</MenuItem>
-          <MenuItem value="descriptive">Descriptive</MenuItem>
-          <MenuItem value="analytical">Analytical</MenuItem>
-          <MenuItem value="creative">Creative</MenuItem>
-          <MenuItem value="instructional">Instructional</MenuItem>
-        </Select>
-      </FormControl>
+          <Box>
+            <Typography variant="subtitle2" gutterBottom>
+              Variables
+            </Typography>
+            <Stack direction="row" spacing={1} mb={1}>
+              <Select
+                size="small"
+                value={selectedVariable}
+                onChange={(e) => setSelectedVariable(e.target.value)}
+              >
+                {VARIABLE_TYPES.map((type) => (
+                  <MenuItem key={type} value={type}>{type}</MenuItem>
+                ))}
+              </Select>
+              <Button 
+                variant="outlined" 
+                size="small"
+                onClick={insertVariable}
+              >
+                Insert Variable
+              </Button>
+            </Stack>
+            <Typography variant="caption" color="text.secondary">
+              Click to insert placeholder variables into your template
+            </Typography>
+          </Box>
 
-      <TextField
-        fullWidth
-        multiline
-        rows={6}
-        label="Prompt Content"
-        value={formData.content}
-        onChange={(e) => handleChange('content', e.target.value)}
-        disabled={loading}
-        className="font-mono"
-      />
+          <TextField
+            fullWidth
+            label="Template Content"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            multiline
+            rows={6}
+            required
+          />
+        </Stack>
+      </CardContent>
 
-      <Box className="flex justify-end space-x-2">
-        <Button variant="outlined" onClick={onCancel} disabled={loading}>
+      <CardActions>
+        <Button size="small" onClick={onCancel}>
           Cancel
         </Button>
-        <Button variant="contained" onClick={handleSubmit} disabled={loading}>
-          {loading ? <CircularProgress size={24} /> : 'Insert Prompt'}
+        <Button 
+          size="small" 
+          variant="contained"
+          onClick={handleSave}
+          disabled={!name || !content}
+        >
+          Save Template
         </Button>
-      </Box>
-    </Box>
+      </CardActions>
+    </Card>
   );
 };
 

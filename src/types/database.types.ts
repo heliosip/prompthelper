@@ -1,32 +1,30 @@
+// src/types/database.types.ts
+
 export interface Template {
   id: string;
+  user_id?: string;
   name: string;
   content: string;
+  category: string;
+  about?: string;
+  outputType: string;
+  prompttype: string;
   description?: string;
-  user_id?: string;
-  ai_model_id?: string;
   is_standard: boolean;
-  created_at?: string;
-  updated_at?: string;
+  created_at: string;
+  updated_at: string;
+  category_id?: string;
 }
 
-export interface PromptSettings {
-  id?: string;
-  template_id?: string;
-  temperature: number;
-  tone: string;
-  style: string;
-  max_tokens?: number;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface AIModel {
-  id: string;
-  name: string;
-  provider: string;
-  model_type: string;
-  version?: string;
-  is_active: boolean;
-  created_at?: string;
+export interface Database {
+  public: {
+    Tables: {
+      templates: {
+        Row: Template;
+        Insert: Omit<Template, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Template>;
+      };
+      // ... other table definitions
+    };
+  };
 }

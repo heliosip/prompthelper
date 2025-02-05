@@ -20,7 +20,7 @@ export const useTemplates = (userId?: string): UseTemplatesResult => {
     setLoading(true);
     setError(null);
     try {
-      let query = supabase
+      let query = supabase.client
         .from('templates')
         .select('*');
 

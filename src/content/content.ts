@@ -1,10 +1,3 @@
-// Extend the Window interface
-declare global {
-  interface Window {
-    __aiPromptHelperLoaded: boolean;
-  }
-}
-
 // Function to find input elements across different AI chat interfaces
 const findInputElement = (): HTMLElement | null => {
   const selectors = [
@@ -37,16 +30,14 @@ const insertText = (input: HTMLElement, text: string): void => {
     // For contenteditable divs
     input.textContent = text;
     input.dispatchEvent(new Event('input', { bubbles: true }));
-    
-    // Additional event for some interfaces
     input.dispatchEvent(new Event('change', { bubbles: true }));
   }
 };
 
-// Handle messages from the popup
+// Listen for messages from the popup
 chrome.runtime.onMessage.addListener(
   (request: any, sender: chrome.runtime.MessageSender, sendResponse: (response: any) => void) => {
-    console.log('Message received in content script:', request);
+    console.log('Content script received message:', request);
 
     if (request.action === 'insertPrompt') {
       try {
@@ -72,8 +63,4 @@ chrome.runtime.onMessage.addListener(
 );
 
 // Set flag that content script is loaded
-window.__aiPromptHelperLoaded = true;
 console.log('AI Prompt Helper content script loaded successfully');
-
-// This export is needed to make this a module
-export {};

@@ -1,1 +1,1 @@
-export * from './templateServices';
+export * from './mockTemplateService';

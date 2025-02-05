@@ -1,6 +1,6 @@
 // src/components/AuthView.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   TextField, 
@@ -10,7 +10,7 @@ import {
   CircularProgress,
   Paper 
 } from '@mui/material';
-import { supabase } from '@/utils/supabaseClient';
+import { getSupabase } from '@/utils/supabaseClient';
 
 interface AuthViewProps {
   onAuthSuccess: () => void;
@@ -24,6 +24,20 @@ const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [clientInitialized, setClientInitialized] = useState(false);
+
+  useEffect(() => {
+    const initClient = async () => {
+      try {
+        await getSupabase();
+        setClientInitialized(true);
+      } catch (err) {
+        console.error('Failed to initialize Supabase client:', err);
+        setError('Failed to initialize authentication. Please try again.');
+      }
+    };
+    initClient();
+  }, []);
 
   const validateForm = () => {
     if (!email || !password) {
@@ -41,60 +55,75 @@ const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
     return true;
   };
 
+  const createUserSettings = async (userId: string) => {
+    try {
+      const supabase = await getSupabase();
+      const { error } = await supabase
+        .from('user_settings')
+        .insert({
+          user_id: userId,
+          theme: 'light',
+          save_history: true,
+          notifications_enabled: true,
+          default_ai_tool: 'claude'
+        });
+      
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error creating user settings:', error);
+      // Don't throw - we still want the auth to succeed even if settings creation fails
+    }
+  };
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) return;
+    if (!validateForm() || !clientInitialized) return;
 
     setError(null);
     setSuccessMessage(null);
     setLoading(true);
 
     try {
+      const supabase = await getSupabase();
+
       if (isSignUp) {
         // Sign Up
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
+            emailRedirectTo: `chrome-extension://${chrome.runtime.id}/auth/callback`,
             data: {
-              username: username
-            }
+              username
+            },
           }
         });
 
         if (signUpError) throw signUpError;
 
-        if (signUpData.user) {
+        if (data?.user) {
           // Create user settings
-          const { error: settingsError } = await supabase
-            .from('user_settings')
-            .insert([{
-              user_id: signUpData.user.id,
-              use_history: true,
-              notifications_enabled: true,
-              theme: 'light'
-            }]);
-
-          if (settingsError) throw settingsError;
-
-          setSuccessMessage('Registration successful! Please check your email to verify your account.');
+          await createUserSettings(data.user.id);
           
-          // Don't call onAuthSuccess yet - wait for email verification
+          setSuccessMessage(
+            'Registration successful! Please check your email to verify your account.'
+          );
         }
       } else {
         // Sign In
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password
         });
 
         if (signInError) throw signInError;
 
-        if (signInData.user) {
+        if (data.user) {
           // Save session to chrome storage
           await chrome.storage.local.set({ 
-            authSession: signInData.session
+            authSession: data.session,
+            userId: data.user.id
           });
           
           onAuthSuccess();
@@ -115,6 +144,14 @@ const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
     setError(null);
     setSuccessMessage(null);
   };
+
+  if (!clientInitialized) {
+    return (
+      <Box className="w-full max-w-md p-6 flex justify-center items-center">
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box className="w-full max-w-md p-6">
@@ -175,7 +212,7 @@ const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
             fullWidth
             variant="contained"
             color="primary"
-            disabled={loading}
+            disabled={loading || !clientInitialized}
             className="h-12"
           >
             {loading ? (

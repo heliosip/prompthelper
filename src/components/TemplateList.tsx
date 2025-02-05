@@ -1,81 +1,47 @@
-// src/components/TemplateList.tsx
-
 import React from 'react';
-import { Box, Typography, CircularProgress, Alert, Button } from '@mui/material';
-import { useTemplates } from '../hooks/useTemplates';
-import type { Template } from '../types/template';
+import { 
+  List, 
+  ListItem, 
+  ListItemText, 
+  ListItemButton,
+  Typography,
+  Chip
+} from '@mui/material';
+import type { Template, TemplateListProps } from '../types/template';
 
-interface TemplateListProps {
-  userId?: string;
-  onSelect: (template: Template) => void;
-}
-
-const TemplateList: React.FC<TemplateListProps> = ({ userId, onSelect }) => {
-  const { templates, loading, error, refresh } = useTemplates(userId);
-
-  if (loading) {
-    return (
-      <Box className="flex justify-center items-center p-4">
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Box className="p-4">
-        <Alert 
-          severity="error" 
-          action={
-            <Button color="inherit" size="small" onClick={refresh}>
-              Retry
-            </Button>
+const TemplateList: React.FC<TemplateListProps> = ({ templates, onSelectTemplate }) => {
+  return (
+    <List>
+      {templates.map((template) => (
+        <ListItem 
+          key={template.id}
+          disablePadding
+          secondaryAction={
+            <Chip 
+              label={template.category}
+              size="small"
+              color="primary"
+              variant="outlined"
+            />
           }
         >
-          {error}
-        </Alert>
-      </Box>
-    );
-  }
-
-  if (templates.length === 0) {
-    return (
-      <Box className="p-4">
-        <Typography color="textSecondary">
-          No templates available.
-        </Typography>
-      </Box>
-    );
-  }
-
-  return (
-    <Box className="space-y-2">
-      {templates.map((template) => (
-        <Box
-          key={template.id}
-          onClick={() => onSelect(template)}
-          className="p-3 border rounded cursor-pointer hover:bg-gray-50"
-        >
-          <Typography variant="subtitle1">
-            {template.name}
-          </Typography>
-          {template.description && (
-            <Typography variant="body2" color="textSecondary">
-              {template.description}
-            </Typography>
-          )}
-        </Box>
+          <ListItemButton onClick={() => onSelectTemplate(template)}>
+            <ListItemText
+              primary={template.name}
+              secondary={
+                <Typography
+                  component="span"
+                  variant="body2"
+                  color="text.secondary"
+                >
+                  {template.description}
+                </Typography>
+              }
+            />
+          </ListItemButton>
+        </ListItem>
       ))}
-      
-      <Button 
-        variant="outlined" 
-        fullWidth 
-        onClick={refresh}
-        className="mt-4"
-      >
-        Refresh Templates
-      </Button>
-    </Box>
+    </List>
   );
 };
 

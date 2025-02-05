@@ -7,18 +7,18 @@
     "jsxImportSource": "@emotion/react",
     "experimentalDecorators": true,
     
-    // Modules
+    // Modules and Paths
     "module": "ESNext",
     "moduleResolution": "bundler",
     "baseUrl": "./src",
     "paths": {
       "@/*": ["*"],
-      "components/*": ["components/*"],
-      "hooks/*": ["hooks/*"],
-      "services/*": ["services/*"],
-      "utils/*": ["utils/*"],
-      "types/*": ["types/*"],
-      "assets/*": ["assets/*"]
+      "@/components/*": ["components/*"],
+      "@/services/*": ["services/*"],
+      "@/utils/*": ["utils/*"],
+      "@/types/*": ["types/*"],
+      "@/hooks/*": ["hooks/*"],
+      "@/assets/*": ["assets/*"]
     },
     
     // JavaScript Support

@@ -1,16 +1,21 @@
+// src/services/templateService.ts
+
 import { supabase } from '../utils/supabaseClient';
-import type { Template, PromptSettings, AIModel } from '../types/database.types';
+import type { Template } from '../types/database.types';
 
 export interface TemplateWithSettings extends Template {
-  settings?: PromptSettings;
-  ai_model?: AIModel;
+  settings?: {
+    temperature?: number;
+    tone?: string;
+    style?: string;
+  };
 }
 
 export const templateService = {
   async getTemplates(userId?: string): Promise<TemplateWithSettings[]> {
-    const query = supabase
+    const query = supabase.client
       .from('templates')
-      .select(`*, prompt_settings (*), ai_models (*)`)
+      .select('*')
       .eq(userId ? 'user_id' : 'is_standard', userId || true);
 
     const { data, error } = await query;
@@ -20,9 +25,13 @@ export const templateService = {
 
   async createTemplate(
     template: Omit<Template, 'id' | 'created_at' | 'updated_at'>,
-    settings?: Omit<PromptSettings, 'id' | 'template_id' | 'created_at' | 'updated_at'>
+    settings?: {
+      temperature?: number;
+      tone?: string;
+      style?: string;
+    }
   ): Promise<TemplateWithSettings> {
-    const { data: templateData, error: templateError } = await supabase
+    const { data: templateData, error: templateError } = await supabase.client
       .from('templates')
       .insert([template])
       .select()
@@ -31,33 +40,46 @@ export const templateService = {
     if (templateError) throw templateError;
 
     if (settings && templateData) {
-      const { error: settingsError } = await supabase
-        .from('prompt_settings')
-        .insert([{ ...settings, template_id: templateData.id }]);
-
-      if (settingsError) throw settingsError;
+      // Store settings in local storage instead since we don't have a settings table
+      await chrome.storage.local.set({
+        [`template_settings_${templateData.id}`]: settings
+      });
     }
 
-    return this.getTemplateById(templateData.id);
+    return {
+      ...templateData,
+      settings
+    };
   },
 
   async getTemplateById(templateId: string): Promise<TemplateWithSettings> {
-    const { data, error } = await supabase
-      .from('templates')
-      .select(`*, prompt_settings (*), ai_models (*)`)
-      .eq('id', templateId)
-      .single();
+    const [templateResult, settings] = await Promise.all([
+      supabase.client
+        .from('templates')
+        .select('*')
+        .eq('id', templateId)
+        .single(),
+      chrome.storage.local.get(`template_settings_${templateId}`)
+    ]);
 
-    if (error) throw error;
-    return data;
+    if (templateResult.error) throw templateResult.error;
+
+    return {
+      ...templateResult.data,
+      settings: settings[`template_settings_${templateId}`]
+    };
   },
 
   async updateTemplate(
     templateId: string,
     template: Partial<Template>,
-    settings?: Partial<PromptSettings>
+    settings?: {
+      temperature?: number;
+      tone?: string;
+      style?: string;
+    }
   ): Promise<TemplateWithSettings> {
-    const { error: templateError } = await supabase
+    const { error: templateError } = await supabase.client
       .from('templates')
       .update(template)
       .eq('id', templateId);
@@ -65,33 +87,24 @@ export const templateService = {
     if (templateError) throw templateError;
 
     if (settings) {
-      const { error: settingsError } = await supabase
-        .from('prompt_settings')
-        .upsert([{ ...settings, template_id: templateId }]);
-
-      if (settingsError) throw settingsError;
+      await chrome.storage.local.set({
+        [`template_settings_${templateId}`]: settings
+      });
     }
 
     return this.getTemplateById(templateId);
   },
 
   async deleteTemplate(templateId: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await supabase.client
       .from('templates')
       .delete()
       .eq('id', templateId);
 
     if (error) throw error;
-  },
 
-  async getAIModels(): Promise<AIModel[]> {
-    const { data, error } = await supabase
-      .from('ai_models')
-      .select('*')
-      .eq('is_active', true);
-
-    if (error) throw error;
-    return data || [];
+    // Clean up settings from local storage
+    await chrome.storage.local.remove(`template_settings_${templateId}`);
   },
 
   async processTemplate(

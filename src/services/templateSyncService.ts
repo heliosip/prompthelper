@@ -1,6 +1,6 @@
 // src/services/templateSyncService.ts
 
-import { supabase } from '@/utils/supabaseClient';
+import { getSupabase } from '@/utils/supabaseClient';
 import type { Template } from '@/types/database.types';
 
 export class TemplateSyncService {
@@ -15,6 +15,7 @@ export class TemplateSyncService {
 
   private static async getRemoteTemplates(userId: string): Promise<Template[]> {
     try {
+      const supabase = await getSupabase();
       const { data, error } = await supabase
         .from('templates')
         .select('*')
@@ -24,12 +25,13 @@ export class TemplateSyncService {
       return data || [];
     } catch (error) {
       console.error('Error fetching remote templates:', error);
-      return [];
+      throw error;
     }
   }
 
   static async syncTemplates(userId: string): Promise<void> {
     try {
+      const supabase = await getSupabase(); // Ensure client is initialized
       const [localTemplates, remoteTemplates] = await Promise.all([
         this.getLocalTemplates(),
         this.getRemoteTemplates(userId)
@@ -41,7 +43,7 @@ export class TemplateSyncService {
       const mergedTemplates: Template[] = [];
       const allIds = new Set([...localMap.keys(), ...remoteMap.keys()]);
       
-      allIds.forEach(id => {
+      for (const id of allIds) {
         const local = localMap.get(id);
         const remote = remoteMap.get(id);
 
@@ -49,7 +51,7 @@ export class TemplateSyncService {
           mergedTemplates.push(remote!);
         } else if (!remote) {
           if (!local.is_standard) {
-            this.syncTemplateToRemote(local, userId);
+            await this.syncTemplateToRemote(local, userId);
           }
           mergedTemplates.push(local);
         } else {
@@ -57,7 +59,7 @@ export class TemplateSyncService {
           const remoteDate = new Date(remote.updated_at);
           mergedTemplates.push(localDate > remoteDate ? local : remote);
         }
-      });
+      }
 
       await this.saveLocalTemplates(mergedTemplates);
       await chrome.storage.local.set({ lastSyncTime: new Date().toISOString() });
@@ -70,6 +72,7 @@ export class TemplateSyncService {
 
   static async syncTemplateToRemote(template: Template, userId: string): Promise<void> {
     try {
+      const supabase = await getSupabase();
       const { error } = await supabase
         .from('templates')
         .upsert({
@@ -80,7 +83,17 @@ export class TemplateSyncService {
 
       if (error) throw error;
     } catch (error) {
-      console.error('Error syncing template to remote:', error);
+      if (error instanceof Error) {
+        console.error('Error syncing template to remote:', {
+          message: error.message,
+          details: (error as any).details,
+          hint: (error as any).hint,
+          code: (error as any).code,
+          error
+        });
+      } else {
+        console.error('Error syncing template to remote:', error);
+      }
       throw error;
     }
   }
@@ -95,9 +108,9 @@ export class TemplateSyncService {
       user_id: userId,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      is_standard: false, // Ensure this is set for new templates
-      outputType: template.outputType || 'text', // Provide default
-      prompttype: template.prompttype || 'general' // Provide default
+      is_standard: false,
+      outputType: template.outputType || 'text',
+      prompttype: template.prompttype || 'general'
     };
 
     try {
@@ -124,14 +137,13 @@ export class TemplateSyncService {
         throw new Error('Template not found');
       }
 
-      // Ensure all required fields are present by spreading the existing template first
       const updatedTemplate: Template = {
         ...existingTemplate,
         ...updates,
-        id: templateId, // Keep the original ID
+        id: templateId,
         updated_at: new Date().toISOString(),
-        created_at: existingTemplate.created_at, // Keep original creation date
-        user_id: userId // Ensure user ID is set
+        created_at: existingTemplate.created_at,
+        user_id: userId
       };
 
       const updatedTemplates = localTemplates.map(t => 
@@ -150,6 +162,7 @@ export class TemplateSyncService {
 
   static async deleteTemplate(templateId: string): Promise<void> {
     try {
+      const supabase = await getSupabase();
       const localTemplates = await this.getLocalTemplates();
       const filteredTemplates = localTemplates.filter(t => t.id !== templateId);
       await this.saveLocalTemplates(filteredTemplates);
@@ -168,6 +181,7 @@ export class TemplateSyncService {
 
   static async initializeOfflineSupport(): Promise<void> {
     try {
+      const supabase = await getSupabase();
       const { data: standardTemplates } = await supabase
         .from('templates')
         .select('*')

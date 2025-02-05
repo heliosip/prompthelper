@@ -1,7 +1,7 @@
 // src/services/promptService.ts
 
 import { supabase } from '../utils/supabaseClient';
-import type { Template, PromptInstance } from '../types/template';
+import type { Template } from '../types/template';
 
 export class PromptService {
   // Insert prompt into active chat
@@ -32,7 +32,7 @@ export class PromptService {
     content: string
   ): Promise<void> {
     try {
-      const { error } = await supabase
+      const { error } = await supabase.client
         .from('prompt_history')
         .insert([
           {
