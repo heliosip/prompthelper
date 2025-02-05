@@ -23,6 +23,7 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.2",
     "@types/chrome": "^0.0.244",
     "@types/jest": "^29.5.14",
     "@types/lodash": "^4.14.199",
