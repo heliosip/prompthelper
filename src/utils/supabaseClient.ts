@@ -6,7 +6,6 @@ import type { Database } from '../types/database.types';
 let supabaseInstance: ReturnType<typeof createClient<Database>> | null = null;
 let initializationPromise: Promise<ReturnType<typeof createClient<Database>>> | null = null;
 
-// Create Supabase client with custom storage adapter for Chrome extension
 const createExtensionStorage = () => ({
   getItem: async (key: string): Promise<string | null> => {
     try {
@@ -33,7 +32,6 @@ const createExtensionStorage = () => ({
   }
 });
 
-// Initialize Supabase client
 const initializeSupabase = async () => {
   const supabaseUrl = 'https://isbtrsujnaskvwajzcii.supabase.co';
   const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzYnRyc3VqbmFza3Z3YWp6Y2lpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzUyODQsImV4cCI6MjA1MzY1MTI4NH0.ZdmhiWHVfHrXlpwsHDbcFvCGAvcIiFI8Ph40lS4-R5E';
@@ -72,12 +70,10 @@ export const getSupabase = async () => {
   return initializationPromise;
 };
 
-// Export auth initialization function
 export const initSupabaseAuth = async () => {
   try {
     const supabase = await getSupabase();
     
-    // Check for existing session
     const { data: { session }, error } = await supabase.auth.getSession();
     
     if (error) throw error;
@@ -86,7 +82,6 @@ export const initSupabaseAuth = async () => {
       await chrome.storage.local.set({ authSession: session });
     }
 
-    // Listen for auth changes
     supabase.auth.onAuthStateChange(async (event, session) => {
       try {
         if (event === 'SIGNED_IN' && session) {
@@ -101,7 +96,6 @@ export const initSupabaseAuth = async () => {
 
   } catch (error) {
     console.error('Auth initialization error:', error);
-    // Handle offline mode or initialization errors
     await chrome.storage.local.remove('authSession');
   }
 };
