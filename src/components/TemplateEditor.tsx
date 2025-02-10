@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+// src/components/TemplateEditor.tsx
+
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   TextField,
-  Button,
   Typography,
   Card,
   CardContent,
@@ -18,16 +19,18 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  Button,
   Alert
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SaveIcon from '@mui/icons-material/Save';
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
-import type { Template } from '../types/template';
+import type { Template, PromptHistory } from '../types/template';
 
 interface TemplateEditorProps {
   template: Template | null | undefined;
+  historyItem?: PromptHistory;
   onSave: (template: Omit<Template, 'id'>) => void;
   onDelete?: (templateId: string) => void;
   onCancel: () => void;
@@ -43,17 +46,18 @@ const headerStyle = {
   fontSize: '1.1rem',
   fontWeight: 500,
   color: '#2C3E50'
-};
+} as const;
 
 const toolbarButtonStyle = {
   backgroundColor: 'transparent',
   '&:hover': {
     backgroundColor: 'rgba(0, 0, 0, 0.04)'
   }
-};
+} as const;
 
 const TemplateEditor: React.FC<TemplateEditorProps> = ({
   template,
+  historyItem,
   onSave,
   onDelete,
   onCancel,
@@ -61,13 +65,28 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
 }) => {
   const [name, setName] = useState(template?.name || '');
   const [description, setDescription] = useState(template?.description || '');
-  const [content, setContent] = useState(template?.content || '');
+  const [content, setContent] = useState(template?.content || historyItem?.content || '');
   const [category, setCategory] = useState(template?.category || 'General');
   const [selectedVariable, setSelectedVariable] = useState('TEXT');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
 
   const isStandardTemplate = template?.is_standard || false;
+  const isFromHistory = !!historyItem;
+
+  useEffect(() => {
+    if (historyItem) {
+      setContent(historyItem.content);
+      // When creating from history, generate a default name based on content
+      if (!template) {
+        const defaultName = historyItem.content
+          .slice(0, 30)
+          .replace(/\[.*?\]/g, '') // Remove variable placeholders
+          .trim() + '...';
+        setName(defaultName);
+      }
+    }
+  }, [historyItem, template]);
 
   const insertVariable = () => {
     const variable = `[${selectedVariable}]`;
@@ -99,9 +118,10 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
       is_standard: false,
       created_at: template?.created_at || new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      user_id: template?.user_id,
+      user_id: template?.user_id || '', // Provide empty string as default
       category_id: template?.category_id,
-      outputType: template?.outputType || 'text',
+      aitool: template?.aitool || '',
+      outputtype: template?.outputtype || 'text',
       prompttype: template?.prompttype || 'general'
     });
   };
@@ -119,7 +139,9 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
         alignItems: 'center'
       }}>
         <Typography sx={headerStyle}>
-          {isStandardTemplate ? 'Save Template As' : (template ? 'Edit Template' : 'New Template')}
+          {isFromHistory ? 'Save History as Template' : 
+           isStandardTemplate ? 'Save Template As' : 
+           template ? 'Edit Template' : 'New Template'}
         </Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Tooltip title="Save">
@@ -161,6 +183,11 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
         {isStandardTemplate && (
           <Alert severity="info" sx={{ mb: 2 }}>
             This is a standard template. You can save a copy with your modifications.
+          </Alert>
+        )}
+        {isFromHistory && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            You're creating a new template from a history item.
           </Alert>
         )}
 

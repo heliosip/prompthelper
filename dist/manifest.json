@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "AI Prompt Helper",
+  "name": "Spaarke",
   "version": "1.0.0",
   "description": "Template-based prompt management for AI chat tools",
   
@@ -8,8 +8,7 @@
     "storage",
     "activeTab",
     "scripting",
-    "tabs",
-    "identity"
+    "tabs"
   ],
   
   "host_permissions": [
