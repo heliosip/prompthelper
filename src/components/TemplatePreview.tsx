@@ -5,53 +5,77 @@ import {
   Box, 
   Typography, 
   TextField,
-  Card,
   IconButton,
   Tooltip,
   Chip,
-  alpha
+  alpha,
+  Theme
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import CloseIcon from '@mui/icons-material/Close';
 import SendIcon from '@mui/icons-material/Send';
-import type { Template } from '../types/template';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
+import type { Template, PromptHistory } from '../types/template';
 
 interface TemplatePreviewProps {
   template: Template;
+  content?: string;
+  isHistory?: boolean;
   onClose: () => void;
   onInsert: (content: string) => void;
-  onEdit: () => void;
+  onEdit?: () => void;
+  onSaveAsTemplate?: () => void;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
 }
 
+const toolbarButtonStyle = {
+  color: 'action.active',
+  '&:hover': {
+    color: 'primary.main',
+    backgroundColor: (theme: Theme) => alpha(theme.palette.primary.main, 0.08)
+  }
+} as const;
+
 const TemplatePreview: React.FC<TemplatePreviewProps> = ({ 
-  template, 
-  onClose, 
+  template,
+  content: initialContent,
+  isHistory,
+  onClose,
   onInsert,
-  onEdit
+  onEdit,
+  onSaveAsTemplate,
+  isFavorite,
+  onToggleFavorite
 }) => {
-  const [content, setContent] = React.useState(template.content);
+  const [content, setContent] = React.useState(initialContent || template.content);
 
   return (
-    <Card sx={{ 
-      height: '100%', 
-      display: 'flex', 
-      flexDirection: 'column',
-      bgcolor: '#FFFFFF'
-    }}>
-      {/* Header */}
+    <Box 
+      sx={{ 
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        bgcolor: 'background.paper'
+      }}
+    >
       <Box sx={{ 
         px: 2, 
         py: 1.5, 
-        borderBottom: '1px solid',
+        borderBottom: 1,
         borderColor: 'divider',
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
+        width: '100%'
       }}>
         <Box>
           <Typography
             sx={{
-              fontSize: '1.1rem',
+              fontSize: '1rem',
               fontWeight: 500,
               color: 'text.primary',
               mb: 0.5
@@ -84,33 +108,41 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
             )}
           </Box>
         </Box>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Tooltip title="Edit">
-            <IconButton
-              size="small"
-              onClick={onEdit}
-              sx={{
-                color: 'action.active',
-                '&:hover': {
-                  color: 'primary.main',
-                  bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1)
-                }
-              }}
-            >
-              <EditIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
+        <Box sx={{ display: 'flex', gap: 0.5 }}>
+          {isHistory && onToggleFavorite && (
+            <Tooltip title={isFavorite ? "Remove from Favorites" : "Add to Favorites"}>
+              <IconButton
+                size="small"
+                onClick={onToggleFavorite}
+                sx={{
+                  ...toolbarButtonStyle,
+                  color: isFavorite ? 'warning.main' : 'action.active',
+                  '&:hover': {
+                    color: 'warning.main',
+                    backgroundColor: (theme: Theme) => alpha(theme.palette.warning.main, 0.08)
+                  }
+                }}
+              >
+                {isFavorite ? <StarIcon fontSize="small" /> : <StarBorderIcon fontSize="small" />}
+              </IconButton>
+            </Tooltip>
+          )}
+          {onEdit && (
+            <Tooltip title="Edit">
+              <IconButton
+                size="small"
+                onClick={onEdit}
+                sx={toolbarButtonStyle}
+              >
+                <EditIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
           <Tooltip title="Close">
             <IconButton
               size="small"
               onClick={onClose}
-              sx={{
-                color: 'action.active',
-                '&:hover': {
-                  color: 'error.main',
-                  bgcolor: (theme) => alpha(theme.palette.error.main, 0.1)
-                }
-              }}
+              sx={toolbarButtonStyle}
             >
               <CloseIcon fontSize="small" />
             </IconButton>
@@ -118,43 +150,34 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
         </Box>
       </Box>
 
-      {/* Content */}
       <Box sx={{ 
         flex: 1, 
-        p: 2,
         display: 'flex',
-        flexDirection: 'column'
+        flexDirection: 'column',
+        p: 2,
+        width: '100%',
+        maxWidth: '100%',
+        overflow: 'hidden'
       }}>
-        {template.description && (
-          <Typography
-            variant="body2"
-            sx={{
-              color: 'text.secondary',
-              mb: 2,
-              fontSize: '0.875rem'
-            }}
-          >
-            {template.description}
-          </Typography>
-        )}
-
         <TextField
           fullWidth
           multiline
-          rows={12}
           value={content}
           onChange={(e) => setContent(e.target.value)}
           variant="outlined"
           placeholder="Template content"
           sx={{
             flex: 1,
-            '& .MuiOutlinedInput-root': {
-              backgroundColor: '#FAFAFA',
-              '&:hover': {
-                backgroundColor: '#F5F5F5'
-              },
-              '&.Mui-focused': {
-                backgroundColor: '#FFFFFF'
+            width: '100%',
+            '& .MuiInputBase-root': {
+              height: '100%',
+              backgroundColor: 'background.default',
+              fontFamily: 'monospace',
+              fontSize: '0.875rem',
+              width: '100%',
+              maxWidth: '100%',
+              '& textarea': {
+                height: '100% !important'
               }
             }
           }}
@@ -163,25 +186,39 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
         <Box sx={{ 
           display: 'flex', 
           justifyContent: 'flex-end',
-          mt: 2
+          alignItems: 'center',
+          gap: 1,
+          mt: 2,
+          width: '100%'
         }}>
-          <Tooltip title="Insert Template">
+          {isHistory && onSaveAsTemplate && (
+            <Tooltip title="Save as Template">
+              <IconButton
+                onClick={onSaveAsTemplate}
+                sx={toolbarButtonStyle}
+              >
+                <StarIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+          <Tooltip title="Send to Chat">
             <IconButton
               onClick={() => onInsert(content)}
-              color="primary"
               sx={{
-                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
+                ...toolbarButtonStyle,
+                color: 'primary.main',
+                backgroundColor: (theme: Theme) => alpha(theme.palette.primary.main, 0.08),
                 '&:hover': {
-                  bgcolor: (theme) => alpha(theme.palette.primary.main, 0.2)
+                  backgroundColor: (theme: Theme) => alpha(theme.palette.primary.main, 0.16)
                 }
               }}
             >
-              <SendIcon />
+              <SendIcon fontSize="small" />
             </IconButton>
           </Tooltip>
         </Box>
       </Box>
-    </Card>
+    </Box>
   );
 };
 

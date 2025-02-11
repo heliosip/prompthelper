@@ -3,10 +3,7 @@
 import React, { useState } from 'react';
 import {
   Box,
-  Tabs,
-  Tab,
   IconButton,
-  Tooltip,
   Typography,
   Menu,
   MenuItem,
@@ -19,6 +16,8 @@ import {
   Checkbox,
   ListItemIcon,
   ListItemText,
+  Theme,
+  Tooltip
 } from '@mui/material';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import HistoryIcon from '@mui/icons-material/History';
@@ -55,7 +54,7 @@ const NavTabs: React.FC<NavTabsProps> = ({
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [keepFavorites, setKeepFavorites] = useState(true);
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (newValue: number) => {
     setCurrentTab(newValue);
     setSelectedItems([]);
   };
@@ -91,7 +90,7 @@ const NavTabs: React.FC<NavTabsProps> = ({
       sx={{
         display: 'flex',
         alignItems: 'center',
-        p: 1,
+        p: 1.5,
         mb: 1,
         borderRadius: 1,
         cursor: 'pointer',
@@ -99,6 +98,7 @@ const NavTabs: React.FC<NavTabsProps> = ({
           bgcolor: 'action.hover',
         },
       }}
+      onClick={() => onSelectTemplate(template)}
     >
       <Box
         sx={{
@@ -125,25 +125,26 @@ const NavTabs: React.FC<NavTabsProps> = ({
           {template.name}
         </Typography>
       </Box>
-      <Tooltip title="Add to Editor">
-        <IconButton
-          size="small"
-          onClick={() => onSelectTemplate(template)}
-          sx={{
-            color: 'action.active',
-            '&:hover': {
-              color: template.is_standard ? 'error.main' : 'primary.main',
-              bgcolor: (theme) =>
-                alpha(
-                  theme.palette[template.is_standard ? 'error' : 'primary'].main,
-                  0.1
-                ),
-            },
-          }}
-        >
-          <AddIcon fontSize="small" />
-        </IconButton>
-      </Tooltip>
+      <IconButton
+        size="small"
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelectTemplate(template);
+        }}
+        sx={{
+          color: 'action.active',
+          '&:hover': {
+            color: template.is_standard ? 'error.main' : 'primary.main',
+            bgcolor: (theme: Theme) =>
+              alpha(
+                theme.palette[template.is_standard ? 'error' : 'primary'].main,
+                0.1
+              ),
+          },
+        }}
+      >
+        <AddIcon fontSize="small" />
+      </IconButton>
     </Box>
   );
 
@@ -153,15 +154,15 @@ const NavTabs: React.FC<NavTabsProps> = ({
       sx={{
         display: 'flex',
         alignItems: 'flex-start',
-        p: 1,
+        p: 1.5,
         mb: 1,
         borderRadius: 1,
         cursor: 'pointer',
         bgcolor: selectedItems.includes(item.id) 
-          ? (theme) => alpha(theme.palette.primary.main, 0.1)
+          ? (theme: Theme) => alpha(theme.palette.primary.main, 0.1)
           : 'transparent',
         '&:hover': {
-          bgcolor: (theme) => selectedItems.includes(item.id)
+          bgcolor: (theme: Theme) => selectedItems.includes(item.id)
             ? alpha(theme.palette.primary.main, 0.2)
             : 'action.hover',
         },
@@ -203,95 +204,132 @@ const NavTabs: React.FC<NavTabsProps> = ({
           {format(new Date(item.created_at), 'MMM d, h:mm a')}
         </Typography>
       </Box>
-      <Tooltip title="Add to Editor">
-        <IconButton
-          size="small"
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelectHistory(item);
-          }}
-          sx={{
-            color: 'action.active',
-            '&:hover': {
-              color: 'primary.main',
-              bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-            },
-          }}
-        >
-          <AddIcon fontSize="small" />
-        </IconButton>
-      </Tooltip>
+      <IconButton
+        size="small"
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelectHistory(item);
+        }}
+        sx={{
+          color: 'action.active',
+          '&:hover': {
+            color: 'primary.main',
+            bgcolor: (theme: Theme) => alpha(theme.palette.primary.main, 0.1),
+          },
+        }}
+      >
+        <AddIcon fontSize="small" />
+      </IconButton>
     </Box>
   );
+
+  // Favorites filtered list
+  const favorites = history.filter(item => item.is_favorite);
 
   return (
     <Box
       sx={{
-        width: 250,
-        height: '100%',
-        borderRight: 1,
-        borderColor: 'divider',
-        bgcolor: 'background.paper',
         display: 'flex',
-        flexDirection: 'column',
+        height: '100%',
+        overflow: 'hidden',
       }}
     >
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center',
-        borderBottom: 1,
-        borderColor: 'divider'
-      }}>
-        <Tabs
-          value={currentTab}
-          onChange={handleTabChange}
+      {/* Icon Navigation */}
+      <Box
+        sx={{
+          width: '48px',
+          borderRight: 1,
+          borderColor: 'divider',
+          display: 'flex',
+          flexDirection: 'column',
+          p: 1,
+          pt: 2
+        }}
+      >
+        <Tooltip title="Templates" placement="right">
+          <IconButton
+            onClick={() => handleTabChange(0)}
+            sx={{
+              mb: 1,
+              color: currentTab === 0 ? 'primary.main' : 'text.secondary',
+              bgcolor: currentTab === 0 ? 'action.selected' : 'transparent',
+              '&:hover': {
+                bgcolor: currentTab === 0 
+                  ? (theme: Theme) => alpha(theme.palette.primary.main, 0.2)
+                  : 'action.hover'
+              }
+            }}
+          >
+            <AutoAwesomeIcon />
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip title="Favorites" placement="right">
+          <IconButton
+            onClick={() => handleTabChange(1)}
+            sx={{
+              mb: 1,
+              color: currentTab === 1 ? 'warning.main' : 'text.secondary',
+              bgcolor: currentTab === 1 ? 'action.selected' : 'transparent',
+              '&:hover': {
+                bgcolor: currentTab === 1 
+                  ? (theme: Theme) => alpha(theme.palette.warning.main, 0.2)
+                  : 'action.hover'
+              }
+            }}
+          >
+            <StarIcon />
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip title="History" placement="right">
+          <IconButton
+            onClick={() => handleTabChange(2)}
+            sx={{
+              color: currentTab === 2 ? 'primary.main' : 'text.secondary',
+              bgcolor: currentTab === 2 ? 'action.selected' : 'transparent',
+              '&:hover': {
+                bgcolor: currentTab === 2 
+                  ? (theme: Theme) => alpha(theme.palette.primary.main, 0.2)
+                  : 'action.hover'
+              }
+            }}
+          >
+            <HistoryIcon />
+          </IconButton>
+        </Tooltip>
+      </Box>
+
+      {/* Content Area */}
+      <Box sx={{ flex: 1, height: '100%', overflow: 'hidden' }}>
+        <Box
           sx={{
-            flex: 1,
-            minHeight: 48,
-            '& .MuiTab-root': {
-              minHeight: 48,
-              minWidth: 'auto',
-              flex: 1,
-            },
+            height: '100%',
+            overflowY: 'scroll',
+            scrollbarWidth: 'none',  // Firefox
+            msOverflowStyle: 'none', // IE/Edge
+            '&::-webkit-scrollbar': {  // Chrome/Safari/Webkit
+              display: 'none'
+            }
           }}
         >
-          <Tab
-            icon={<AutoAwesomeIcon />}
-            label="Templates"
-            iconPosition="start"
-          />
-          <Tab
-            icon={<HistoryIcon />}
-            label="History"
-            iconPosition="start"
-          />
-        </Tabs>
-        {currentTab === 1 && (
-          <IconButton
-            size="small"
-            onClick={(e) => setMenuAnchor(e.currentTarget)}
-            sx={{ mr: 1 }}
-          >
-            <MoreVertIcon />
-          </IconButton>
-        )}
+          {currentTab === 0 && templates.map(renderTemplateItem)}
+          {currentTab === 1 && favorites.map(renderHistoryItem)}
+          {currentTab === 2 && (
+            <>
+              {history.map(renderHistoryItem)}
+              {history.length === 0 && (
+                <Box sx={{ textAlign: 'center', color: 'text.secondary', mt: 4 }}>
+                  <HistoryIcon sx={{ fontSize: 48, mb: 1, opacity: 0.5 }} />
+                  <Typography variant="body2">No history yet</Typography>
+                </Box>
+              )}
+            </>
+          )}
+        </Box>
       </Box>
 
-      <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
-        {currentTab === 0 ? (
-          templates.map(renderTemplateItem)
-        ) : (
-          history.map(renderHistoryItem)
-        )}
-        {currentTab === 1 && history.length === 0 && (
-          <Box sx={{ textAlign: 'center', color: 'text.secondary', mt: 4 }}>
-            <HistoryIcon sx={{ fontSize: 48, mb: 1, opacity: 0.5 }} />
-            <Typography variant="body2">No history yet</Typography>
-          </Box>
-        )}
-      </Box>
-
-      {/* History Menu */}
+      {/* Menu and Dialog */}
       <Menu
         anchorEl={menuAnchor}
         open={Boolean(menuAnchor)}
@@ -316,7 +354,6 @@ const NavTabs: React.FC<NavTabsProps> = ({
         </MenuItem>
       </Menu>
 
-      {/* Clear History Dialog */}
       <Dialog
         open={clearDialogOpen}
         onClose={() => setClearDialogOpen(false)}

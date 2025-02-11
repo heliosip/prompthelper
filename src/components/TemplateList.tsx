@@ -10,7 +10,8 @@ import {
   ListItem,
   Tooltip,
   Chip,
-  alpha
+  alpha,
+  Theme
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import EditIcon from '@mui/icons-material/Edit';
@@ -40,11 +41,18 @@ const item = {
   }
 };
 
+const toolbarButtonStyle = {
+  color: 'action.active',
+  '&:hover': {
+    color: 'primary.main',
+    backgroundColor: (theme: Theme) => alpha(theme.palette.primary.main, 0.08)
+  }
+} as const;
+
 const TemplateList: React.FC<TemplateListProps> = ({ 
   templates,
   onSelectTemplate
 }) => {
-  // Group templates by category
   const groupedTemplates = templates.reduce((acc, template) => {
     const category = template.category || 'Uncategorized';
     if (!acc[category]) {
@@ -55,11 +63,12 @@ const TemplateList: React.FC<TemplateListProps> = ({
   }, {} as Record<string, Template[]>);
 
   return (
-    <Box>
+    <Box sx={{ height: '100%', overflow: 'hidden' }}>
       <motion.div
         variants={container}
         initial="hidden"
         animate="visible"
+        style={{ height: '100%', overflow: 'auto', paddingRight: 8 }}
       >
         {Object.entries(groupedTemplates).map(([category, categoryTemplates]) => (
           <Box key={category} sx={{ mb: 3 }}>
@@ -117,8 +126,8 @@ const TemplateList: React.FC<TemplateListProps> = ({
                               sx={{
                                 height: 20,
                                 fontSize: '0.75rem',
-                                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-                                color: 'primary.main'
+                                bgcolor: (theme) => alpha(theme.palette.success.main, 0.1),
+                                color: 'success.main'
                               }}
                             />
                           )}
@@ -144,13 +153,7 @@ const TemplateList: React.FC<TemplateListProps> = ({
                             e.stopPropagation();
                             onSelectTemplate(template);
                           }}
-                          sx={{
-                            color: 'action.active',
-                            '&:hover': {
-                              color: 'primary.main',
-                              bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1)
-                            }
-                          }}
+                          sx={toolbarButtonStyle}
                         >
                           <EditIcon fontSize="small" />
                         </IconButton>
@@ -162,49 +165,49 @@ const TemplateList: React.FC<TemplateListProps> = ({
             </List>
           </Box>
         ))}
-      </motion.div>
 
-      {templates.length === 0 && (
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            py: 8,
-            px: 2,
-            textAlign: 'center'
-          }}
-        >
-          <AddIcon
+        {templates.length === 0 && (
+          <Box
             sx={{
-              fontSize: 48,
-              color: 'action.disabled',
-              mb: 2
-            }}
-          />
-          <Typography
-            variant="h6"
-            sx={{
-              color: 'text.secondary',
-              fontSize: '1rem',
-              fontWeight: 500,
-              mb: 1
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              py: 8,
+              px: 2,
+              textAlign: 'center'
             }}
           >
-            No Templates Yet
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{
-              color: 'text.disabled',
-              maxWidth: 300
-            }}
-          >
-            Create your first template by clicking the + button below
-          </Typography>
-        </Box>
-      )}
+            <AddIcon
+              sx={{
+                fontSize: 48,
+                color: 'action.disabled',
+                mb: 2
+              }}
+            />
+            <Typography
+              variant="h6"
+              sx={{
+                color: 'text.secondary',
+                fontSize: '1rem',
+                fontWeight: 500,
+                mb: 1
+              }}
+            >
+              No Templates Yet
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'text.disabled',
+                maxWidth: 300
+              }}
+            >
+              Create your first template by clicking the + button below
+            </Typography>
+          </Box>
+        )}
+      </motion.div>
     </Box>
   );
 };

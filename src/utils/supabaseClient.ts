@@ -3,9 +3,11 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../types/database.types';
 
-let supabaseInstance: ReturnType<typeof createClient<Database>> | null = null;
-let initializationPromise: Promise<ReturnType<typeof createClient<Database>>> | null = null;
+// Constants for Supabase connection
+const SUPABASE_URL = 'https://isbtrsujnaskvwajzcii.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzYnRyc3VqbmFza3Z3YWp6Y2lpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzUyODQsImV4cCI6MjA1MzY1MTI4NH0.ZdmhiWHVfHrXlpwsHDbcFvCGAvcIiFI8Ph40lS4-R5E';
 
+// Create custom storage adapter for Chrome extension
 const createExtensionStorage = () => ({
   getItem: async (key: string): Promise<string | null> => {
     try {
@@ -32,70 +34,68 @@ const createExtensionStorage = () => ({
   }
 });
 
-const initializeSupabase = async () => {
-  const supabaseUrl = 'https://isbtrsujnaskvwajzcii.supabase.co';
-  const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzYnRyc3VqbmFza3Z3YWp6Y2lpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwNzUyODQsImV4cCI6MjA1MzY1MTI4NH0.ZdmhiWHVfHrXlpwsHDbcFvCGAvcIiFI8Ph40lS4-R5E';
+class SupabaseService {
+  private static instance: SupabaseService | null = null;
+  private client: ReturnType<typeof createClient<Database>>;
 
-  return createClient<Database>(
-    supabaseUrl,
-    supabaseAnonKey,
-    {
-      auth: {
-        storage: createExtensionStorage(),
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: false
-      },
-      global: {
-        headers: {
-          'X-Client-Info': 'prompthelper-extension'
+  private constructor() {
+    this.client = createClient<Database>(
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY,
+      {
+        auth: {
+          storage: createExtensionStorage(),
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: false
+        },
+        global: {
+          headers: {
+            'X-Client-Info': 'prompthelper-extension'
+          }
         }
       }
+    );
+  }
+
+  public static getInstance(): SupabaseService {
+    if (!SupabaseService.instance) {
+      SupabaseService.instance = new SupabaseService();
     }
-  );
-};
-
-export const getSupabase = async () => {
-  if (supabaseInstance) {
-    return supabaseInstance;
+    return SupabaseService.instance;
   }
 
-  if (!initializationPromise) {
-    initializationPromise = initializeSupabase().then(client => {
-      supabaseInstance = client;
-      return client;
-    });
+  public getClient() {
+    return this.client;
   }
+}
 
-  return initializationPromise;
-};
-
+// Initialize Supabase auth
 export const initSupabaseAuth = async () => {
   try {
-    const supabase = await getSupabase();
-    
+    const supabase = getSupabase();
     const { data: { session }, error } = await supabase.auth.getSession();
     
-    if (error) throw error;
-    
-    if (session) {
-      await chrome.storage.local.set({ authSession: session });
+    if (error) {
+      console.error('Error initializing Supabase auth:', error);
+      throw error;
     }
 
-    supabase.auth.onAuthStateChange(async (event, session) => {
-      try {
-        if (event === 'SIGNED_IN' && session) {
-          await chrome.storage.local.set({ authSession: session });
-        } else if (event === 'SIGNED_OUT') {
-          await chrome.storage.local.remove('authSession');
-        }
-      } catch (err) {
-        console.error('Auth state change error:', err);
-      }
-    });
+    if (!session) {
+      console.log('No active session found');
+    } else {
+      console.log('Auth session initialized successfully');
+    }
 
+    return session;
   } catch (error) {
-    console.error('Auth initialization error:', error);
-    await chrome.storage.local.remove('authSession');
+    console.error('Failed to initialize Supabase auth:', error);
+    throw error;
   }
 };
+
+// Export the getSupabase function that returns the client instance
+export const getSupabase = () => SupabaseService.getInstance().getClient();
+
+// Optional: Export a type for the Supabase client
+export type SupabaseClient = ReturnType<typeof createClient<Database>>;

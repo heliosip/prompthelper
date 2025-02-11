@@ -2,9 +2,10 @@
 
 import { getSupabase } from '@/utils/supabaseClient';
 import type { PromptHistory } from '@/types/database.types';
+import { supabase } from '@/supabaseClient';
 
 export class PromptHistoryService {
-  private static async getLocalHistory(): Promise<PromptHistory[]> {
+  public static async getLocalHistory() {
     const { promptHistory = [] } = await chrome.storage.local.get('promptHistory');
     return promptHistory;
   }
@@ -27,38 +28,27 @@ export class PromptHistoryService {
   static async addHistoryEntry(
     content: string,
     userId: string,
-    templateId?: string
+    template_id?: string
   ): Promise<PromptHistory> {
     try {
-      const supabase = await getSupabase();
-      
       const entry: PromptHistory = {
         id: crypto.randomUUID(),
         user_id: userId,
-        template_id: templateId,
+        template_id,  // Keep as undefined if not provided
         content,
         created_at: new Date().toISOString(),
         is_favorite: false
       };
-
-      // Save to Supabase
+  
+      // For Supabase insert, spread entry and omit template_id if undefined
       const { error } = await supabase
         .from('prompt_history')
         .insert({
-          id: entry.id,
-          user_id: userId,
-          template_id: templateId,
-          content,
-          created_at: entry.created_at,
-          is_favorite: false
+          ...entry,
+          template_id: template_id || undefined
         });
-
+  
       if (error) throw error;
-
-      // Save to local storage
-      const history = await this.getLocalHistory();
-      await this.saveLocalHistory([entry, ...history]);
-
       return entry;
     } catch (error) {
       console.error('Error adding history entry:', error);
@@ -72,7 +62,7 @@ export class PromptHistoryService {
       const history = await this.getLocalHistory();
       
       // Find the entry and its current favorite status
-      const entry = history.find(e => e.id === entryId);
+      const entry = history.find((e: PromptHistory) => e.id === entryId);
       if (!entry) return;
       
       const newFavoriteStatus = !entry.is_favorite;
@@ -86,7 +76,7 @@ export class PromptHistoryService {
       if (error) throw error;
 
       // Update local storage
-      const updatedHistory = history.map(entry => 
+      const updatedHistory = history.map((entry: PromptHistory) => 
         entry.id === entryId 
           ? { ...entry, is_favorite: newFavoriteStatus }
           : entry
@@ -113,7 +103,7 @@ export class PromptHistoryService {
 
       // Delete from local storage
       const history = await this.getLocalHistory();
-      await this.saveLocalHistory(history.filter(entry => entry.id !== entryId));
+      await this.saveLocalHistory(history.filter((entry: PromptHistory) => entry.id !== entryId));
     } catch (error) {
       console.error('Error deleting history entry:', error);
       throw error;
@@ -135,7 +125,7 @@ export class PromptHistoryService {
       // Delete from local storage
       const history = await this.getLocalHistory();
       await this.saveLocalHistory(
-        history.filter(entry => !entryIds.includes(entry.id))
+        history.filter((entry: PromptHistory) => !entryIds.includes(entry.id))
       );
     } catch (error) {
       console.error('Error deleting history entries:', error);
@@ -158,7 +148,7 @@ export class PromptHistoryService {
         if (error) throw error;
 
         // Keep only favorite items in local storage
-        await this.saveLocalHistory(history.filter(entry => entry.is_favorite));
+        await this.saveLocalHistory(history.filter((entry: PromptHistory) => entry.is_favorite));
       } else {
         // Delete all items from Supabase
         const { error } = await supabase
@@ -195,7 +185,7 @@ export class PromptHistoryService {
       // Merge histories, preserving local favorite status
       const mergedHistory = (remoteHistory || []).map(remote => ({
         ...remote,
-        is_favorite: localHistory.find(local => local.id === remote.id)?.is_favorite || remote.is_favorite
+        is_favorite: localHistory.find((local: PromptHistory) => local.id === remote.id)?.is_favorite || remote.is_favorite
       }));
 
       await this.saveLocalHistory(mergedHistory);

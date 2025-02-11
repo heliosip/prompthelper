@@ -53,6 +53,27 @@ export class TemplateSyncService {
     });
   }
 
+  private static sanitizeTemplateData(template: Partial<Template>): Partial<Template> {
+    const sanitized = { ...template };
+    
+    // Handle category_id
+    if (!sanitized.category_id || sanitized.category_id === '') {
+      delete sanitized.category_id;
+    }
+
+    // Type-safe field sanitization
+    const stringFields = ['name', 'content', 'category', 'description'] as const;
+    type StringField = typeof stringFields[number];
+    
+    stringFields.forEach(field => {
+      if (field in sanitized && (sanitized[field] === undefined || sanitized[field] === null)) {
+        (sanitized[field as keyof Template] as string) = '';
+      }
+    });
+
+    return sanitized;
+}
+
   static async syncTemplates(userId: string): Promise<void> {
     return SyncRetryHandler.retryOperation(async () => {
       try {
@@ -129,7 +150,7 @@ export class TemplateSyncService {
           userId: userId
         });
         
-        const templateToSync = {
+        const templateToSync = this.sanitizeTemplateData({
           id: template.id,
           name: template.name,
           content: template.content,
@@ -140,7 +161,7 @@ export class TemplateSyncService {
           updated_at: new Date().toISOString(),
           created_at: template.created_at,
           category_id: template.category_id
-      };
+        });
 
         console.log('Template data being sent to Supabase:', templateToSync);
 
@@ -188,16 +209,16 @@ export class TemplateSyncService {
           throw new Error('User ID is required to create a template');
         }
 
+        const sanitizedTemplate = this.sanitizeTemplateData(template);
         const newTemplate: Template = {
-          ...template,
+          ...sanitizedTemplate,
           id: crypto.randomUUID(),
           user_id: userId,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           is_standard: false,
           description: template.description || '',
-          category_id: template.category_id
-      };
+        } as Template;
 
         console.log('Creating new template:', newTemplate.id);
         
@@ -235,9 +256,10 @@ export class TemplateSyncService {
           throw new Error('Cannot modify standard templates');
         }
 
+        const sanitizedUpdates = this.sanitizeTemplateData(updates);
         const updatedTemplate: Template = {
           ...existingTemplate,
-          ...updates,
+          ...sanitizedUpdates,
           id: templateId,
           updated_at: new Date().toISOString(),
           created_at: existingTemplate.created_at,

@@ -1,7 +1,7 @@
 // src/components/SyncStatus.tsx
 
 import React from 'react';
-import { Box, Typography, IconButton, Tooltip } from '@mui/material';
+import { Box, Typography, IconButton, Tooltip, alpha, Theme } from '@mui/material';
 import { 
   CloudOff as CloudOffIcon,
   CloudDone as CloudDoneIcon,
@@ -18,6 +18,17 @@ interface SyncStatusProps {
   error?: string;
 }
 
+const toolbarButtonStyle = {
+  color: 'action.active',
+  '&:hover': {
+    color: 'primary.main',
+    backgroundColor: (theme: Theme) => alpha(theme.palette.primary.main, 0.08)
+  },
+  '&.Mui-disabled': {
+    color: 'action.disabled'
+  }
+} as const;
+
 const SyncStatus: React.FC<SyncStatusProps> = ({ 
   state, 
   lastSyncTime, 
@@ -27,13 +38,13 @@ const SyncStatus: React.FC<SyncStatusProps> = ({
   const getStatusIcon = () => {
     switch (state) {
       case 'offline':
-        return <CloudOffIcon className="text-gray-500" />;
+        return <CloudOffIcon fontSize="small" />;
       case 'syncing':
-        return <CloudSyncIcon className="text-blue-500 animate-spin" />;
+        return <CloudSyncIcon fontSize="small" sx={{ animation: 'spin 1s linear infinite' }} />;
       case 'synced':
-        return <CloudDoneIcon className="text-green-500" />;
+        return <CloudDoneIcon fontSize="small" sx={{ color: 'success.main' }} />;
       case 'error':
-        return <CloudQueueIcon className="text-red-500" />;
+        return <CloudQueueIcon fontSize="small" sx={{ color: 'error.main' }} />;
     }
   };
 
@@ -51,17 +62,29 @@ const SyncStatus: React.FC<SyncStatusProps> = ({
   };
 
   return (
-    <Box className="flex items-center space-x-2 px-2 py-1 rounded-md bg-gray-100">
+    <Box sx={{ 
+      display: 'flex',
+      alignItems: 'center',
+      gap: 1,
+      px: 1,
+      py: 0.5,
+      borderRadius: 1,
+      bgcolor: 'background.default'
+    }}>
       <Tooltip title={getStatusText()}>
         <IconButton 
           size="small" 
           onClick={onSyncClick}
           disabled={state === 'syncing'}
+          sx={toolbarButtonStyle}
         >
           {getStatusIcon()}
         </IconButton>
       </Tooltip>
-      <Typography variant="caption" className="text-gray-600">
+      <Typography 
+        variant="caption" 
+        sx={{ color: 'text.secondary' }}
+      >
         {getStatusText()}
       </Typography>
     </Box>

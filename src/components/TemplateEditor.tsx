@@ -1,12 +1,9 @@
 // src/components/TemplateEditor.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   TextField,
-  Typography,
-  Card,
-  CardContent,
   Stack,
   Select,
   MenuItem,
@@ -20,17 +17,19 @@ import {
   DialogContentText,
   DialogActions,
   Button,
-  Alert
+  alpha,
+  Theme
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SaveIcon from '@mui/icons-material/Save';
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
-import type { Template, PromptHistory } from '../types/template';
+import PushPinIcon from '@mui/icons-material/PushPin';
+import ClearIcon from '@mui/icons-material/Clear';
+import type { Template } from '../types/template';
 
 interface TemplateEditorProps {
   template: Template | null | undefined;
-  historyItem?: PromptHistory;
   onSave: (template: Omit<Template, 'id'>) => void;
   onDelete?: (templateId: string) => void;
   onCancel: () => void;
@@ -40,53 +39,33 @@ interface TemplateEditorProps {
 const CATEGORIES = ['Planning', 'Development', 'Analysis', 'General'];
 const VARIABLE_TYPES = ['TEXT', 'CODE', 'NUMBER', 'DATE'];
 
-// Custom styles
-const headerStyle = {
-  fontFamily: "'Inter', sans-serif",
-  fontSize: '1.1rem',
-  fontWeight: 500,
-  color: '#2C3E50'
-} as const;
-
 const toolbarButtonStyle = {
-  backgroundColor: 'transparent',
+  color: 'action.active',
   '&:hover': {
-    backgroundColor: 'rgba(0, 0, 0, 0.04)'
+    color: 'primary.main',
+    backgroundColor: (theme: Theme) => alpha(theme.palette.primary.main, 0.08)
+  },
+  '&.Mui-disabled': {
+    color: 'action.disabled'
   }
 } as const;
 
 const TemplateEditor: React.FC<TemplateEditorProps> = ({
   template,
-  historyItem,
   onSave,
   onDelete,
   onCancel,
   existingTemplateNames = []
 }) => {
   const [name, setName] = useState(template?.name || '');
-  const [description, setDescription] = useState(template?.description || '');
-  const [content, setContent] = useState(template?.content || historyItem?.content || '');
+  const [content, setContent] = useState(template?.content || '');
   const [category, setCategory] = useState(template?.category || 'General');
   const [selectedVariable, setSelectedVariable] = useState('TEXT');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
+  const [isPinned, setIsPinned] = useState(false);
 
   const isStandardTemplate = template?.is_standard || false;
-  const isFromHistory = !!historyItem;
-
-  useEffect(() => {
-    if (historyItem) {
-      setContent(historyItem.content);
-      // When creating from history, generate a default name based on content
-      if (!template) {
-        const defaultName = historyItem.content
-          .slice(0, 30)
-          .replace(/\[.*?\]/g, '') // Remove variable placeholders
-          .trim() + '...';
-        setName(defaultName);
-      }
-    }
-  }, [historyItem, template]);
 
   const insertVariable = () => {
     const variable = `[${selectedVariable}]`;
@@ -114,12 +93,12 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
       name,
       content,
       category,
-      description: description || '',
+      description: '',
       is_standard: false,
       created_at: template?.created_at || new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      user_id: template?.user_id || '', // Provide empty string as default
-      category_id: template?.category_id,
+      user_id: template?.user_id || '',
+      category_id: template?.category_id || '',
       aitool: template?.aitool || '',
       outputtype: template?.outputtype || 'text',
       prompttype: template?.prompttype || 'general'
@@ -127,42 +106,103 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
   };
 
   return (
-    <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Header Toolbar */}
+    <Box sx={{ 
+      width: '100%',
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+      bgcolor: 'background.paper'
+    }}>
       <Box sx={{ 
         px: 2, 
         py: 1.5, 
-        borderBottom: '1px solid',
+        borderBottom: 1,
         borderColor: 'divider',
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
+        width: '100%'
       }}>
-        <Typography sx={headerStyle}>
-          {isFromHistory ? 'Save History as Template' : 
-           isStandardTemplate ? 'Save Template As' : 
-           template ? 'Edit Template' : 'New Template'}
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Tooltip title="Save">
-            <IconButton 
-              onClick={handleSave}
-              disabled={!name || !content || !!nameError}
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 2,
+          flex: 1 
+        }}>
+          <TextField
+            value={name}
+            onChange={handleNameChange}
+            variant="standard"
+            placeholder="Template Name"
+            fullWidth
+            error={!!nameError}
+            helperText={nameError}
+            sx={{
+              flex: 1,
+              '& .MuiInputBase-root': {
+                fontSize: '1.1rem'
+              }
+            }}
+          />
+          <FormControl sx={{ minWidth: 120 }}>
+            <Select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              variant="standard"
               size="small"
+            >
+              {CATEGORIES.map((cat) => (
+                <MenuItem key={cat} value={cat}>{cat}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Tooltip title={isPinned ? "Unpin window" : "Pin window"}>
+            <IconButton 
+              size="small" 
+              onClick={() => setIsPinned(!isPinned)}
               sx={toolbarButtonStyle}
             >
-              <SaveIcon />
+              <PushPinIcon fontSize="small" color={isPinned ? "primary" : "inherit"} />
             </IconButton>
+          </Tooltip>
+          <Tooltip title="Clear content">
+            <IconButton 
+              size="small"
+              onClick={() => setContent('')}
+              sx={toolbarButtonStyle}
+            >
+              <ClearIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Save">
+            <span>
+              <IconButton 
+                onClick={handleSave}
+                disabled={!name || !content || !!nameError}
+                size="small"
+                sx={toolbarButtonStyle}
+              >
+                <SaveIcon fontSize="small" />
+              </IconButton>
+            </span>
           </Tooltip>
           {template && !isStandardTemplate && onDelete && (
             <Tooltip title="Delete">
               <IconButton 
                 onClick={() => setDeleteDialogOpen(true)}
                 size="small"
-                sx={toolbarButtonStyle}
-                color="error"
+                sx={{
+                  ...toolbarButtonStyle,
+                  '&:hover': {
+                    color: 'error.main',
+                    backgroundColor: (theme) => alpha(theme.palette.error.main, 0.08)
+                  }
+                }}
               >
-                <DeleteIcon />
+                <DeleteIcon fontSize="small" />
               </IconButton>
             </Tooltip>
           )}
@@ -172,116 +212,95 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
               size="small"
               sx={toolbarButtonStyle}
             >
-              <CloseIcon />
+              <CloseIcon fontSize="small" />
             </IconButton>
           </Tooltip>
         </Box>
       </Box>
 
-      {/* Main Content */}
-      <CardContent sx={{ flex: 1, overflow: 'auto', p: 2 }}>
-        {isStandardTemplate && (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            This is a standard template. You can save a copy with your modifications.
-          </Alert>
-        )}
-        {isFromHistory && (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            You're creating a new template from a history item.
-          </Alert>
-        )}
-
-        <Stack spacing={2}>
-          <TextField
-            fullWidth
-            label="Template Name"
-            value={name}
-            onChange={handleNameChange}
-            required
-            error={!!nameError}
-            helperText={nameError}
+      <Box sx={{ 
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        p: 2,
+        width: '100%',
+        overflow: 'hidden'
+      }}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 1,
+          mb: 2,
+          bgcolor: 'background.default',
+          p: 1,
+          borderRadius: 1
+        }}>
+          <Select
             size="small"
-          />
-
-          <TextField
-            fullWidth
-            label="Description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            multiline
-            rows={2}
-            size="small"
-          />
-
-          <FormControl fullWidth size="small">
-            <InputLabel>Category</InputLabel>
-            <Select
-              value={category}
-              label="Category"
-              onChange={(e) => setCategory(e.target.value)}
-            >
-              {CATEGORIES.map((cat) => (
-                <MenuItem key={cat} value={cat}>{cat}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          {/* Variables Section */}
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 1,
-            backgroundColor: '#f8f9fa',
-            p: 1,
-            borderRadius: 1
-          }}>
-            <Select
+            value={selectedVariable}
+            onChange={(e) => setSelectedVariable(e.target.value)}
+            sx={{ minWidth: 100 }}
+          >
+            {VARIABLE_TYPES.map((type) => (
+              <MenuItem key={type} value={type}>{type}</MenuItem>
+            ))}
+          </Select>
+          <Tooltip title="Insert Variable">
+            <IconButton 
+              onClick={insertVariable}
               size="small"
-              value={selectedVariable}
-              onChange={(e) => setSelectedVariable(e.target.value)}
-              sx={{ minWidth: 100 }}
+              sx={toolbarButtonStyle}
             >
-              {VARIABLE_TYPES.map((type) => (
-                <MenuItem key={type} value={type}>{type}</MenuItem>
-              ))}
-            </Select>
-            <Tooltip title="Insert Variable">
-              <IconButton 
-                onClick={insertVariable}
-                size="small"
-                sx={toolbarButtonStyle}
-              >
-                <AddIcon />
-              </IconButton>
-            </Tooltip>
-          </Box>
+              <AddIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Box>
 
-          <TextField
-            fullWidth
-            label="Template Content"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            multiline
-            rows={12}
-            required
-            sx={{ flex: 1 }}
-          />
-        </Stack>
-      </CardContent>
+        <TextField
+          multiline
+          fullWidth
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          variant="outlined"
+          placeholder="Enter your template content here..."
+          sx={{
+            flex: 1,
+            width: '100%',
+            '& .MuiInputBase-root': {
+              height: '100%',
+              backgroundColor: 'background.default',
+              fontFamily: 'monospace',
+              fontSize: '0.875rem',
+              '& textarea': {
+                height: '100% !important'
+              }
+            }
+          }}
+        />
+      </Box>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            width: '100%',
+            maxWidth: 400
+          }
+        }}
       >
-        <DialogTitle>Delete Template?</DialogTitle>
-        <DialogContent>
+        <DialogTitle sx={{ pb: 1 }}>Delete Template?</DialogTitle>
+        <DialogContent sx={{ pb: 2 }}>
           <DialogContentText>
             Are you sure you want to delete this template? This action cannot be undone.
           </DialogContentText>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button 
+            onClick={() => setDeleteDialogOpen(false)}
+            sx={{ minWidth: 100 }}
+          >
             Cancel
           </Button>
           <Button 
@@ -291,14 +310,16 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
               }
               setDeleteDialogOpen(false);
             }} 
-            color="error" 
+            variant="contained"
+            color="error"
             autoFocus
+            sx={{ minWidth: 100 }}
           >
             Delete
           </Button>
         </DialogActions>
       </Dialog>
-    </Card>
+    </Box>
   );
 };
 

@@ -8,7 +8,8 @@ import {
   Typography, 
   Alert, 
   CircularProgress,
-  Paper 
+  Paper,
+  Stack
 } from '@mui/material';
 import { getSupabase } from '@/utils/supabaseClient';
 
@@ -71,7 +72,6 @@ const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
       if (error) throw error;
     } catch (error) {
       console.error('Error creating user settings:', error);
-      // Don't throw - we still want the auth to succeed even if settings creation fails
     }
   };
 
@@ -88,7 +88,6 @@ const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
       const supabase = await getSupabase();
 
       if (isSignUp) {
-        // Sign Up
         const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -103,15 +102,12 @@ const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
         if (signUpError) throw signUpError;
 
         if (data?.user) {
-          // Create user settings
           await createUserSettings(data.user.id);
-          
           setSuccessMessage(
             'Registration successful! Please check your email to verify your account.'
           );
         }
       } else {
-        // Sign In
         const { data, error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password
@@ -120,7 +116,6 @@ const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
         if (signInError) throw signInError;
 
         if (data.user) {
-          // Save session to chrome storage
           await chrome.storage.local.set({ 
             authSession: data.session,
             userId: data.user.id
@@ -147,80 +142,102 @@ const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
 
   if (!clientInitialized) {
     return (
-      <Box className="w-full max-w-md p-6 flex justify-center items-center">
+      <Box sx={{ width: '100%', maxWidth: 'md', p: 3, display: 'flex', justifyContent: 'center' }}>
         <CircularProgress />
       </Box>
     );
   }
 
   return (
-    <Box className="w-full max-w-md p-6">
-      <Paper elevation={3} className="p-6">
-        <Typography variant="h5" className="mb-6 text-center">
+    <Box sx={{ 
+      width: '100%',
+      maxWidth: 'md',
+      p: 3
+    }}>
+      <Paper 
+        elevation={3} 
+        sx={{ 
+          p: 3,
+          borderRadius: 2,
+          bgcolor: 'background.paper'
+        }}
+      >
+        <Typography 
+          variant="h5" 
+          sx={{ 
+            mb: 3, 
+            textAlign: 'center',
+            fontWeight: 500
+          }}
+        >
           {isSignUp ? 'Create Account' : 'Welcome Back'}
         </Typography>
 
         {error && (
-          <Alert severity="error" className="mb-4">
+          <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
 
         {successMessage && (
-          <Alert severity="success" className="mb-4">
+          <Alert severity="success" sx={{ mb: 2 }}>
             {successMessage}
           </Alert>
         )}
 
-        <form onSubmit={handleAuth} className="space-y-4">
-          {isSignUp && (
+        <form onSubmit={handleAuth}>
+          <Stack spacing={2}>
+            {isSignUp && (
+              <TextField
+                fullWidth
+                label="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                disabled={loading}
+                required
+                autoComplete="username"
+                size="small"
+              />
+            )}
+
             <TextField
               fullWidth
-              label="Username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              type="email"
+              label="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
               required
-              autoComplete="username"
+              autoComplete="email"
+              size="small"
             />
-          )}
 
-          <TextField
-            fullWidth
-            type="email"
-            label="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={loading}
-            required
-            autoComplete="email"
-          />
+            <TextField
+              fullWidth
+              type="password"
+              label="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
+              required
+              autoComplete={isSignUp ? 'new-password' : 'current-password'}
+              size="small"
+            />
 
-          <TextField
-            fullWidth
-            type="password"
-            label="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={loading}
-            required
-            autoComplete={isSignUp ? 'new-password' : 'current-password'}
-          />
-
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            color="primary"
-            disabled={loading || !clientInitialized}
-            className="h-12"
-          >
-            {loading ? (
-              <CircularProgress size={24} />
-            ) : (
-              isSignUp ? 'Sign Up' : 'Sign In'
-            )}
-          </Button>
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              disabled={loading || !clientInitialized}
+              sx={{ height: 40 }}
+            >
+              {loading ? (
+                <CircularProgress size={24} />
+              ) : (
+                isSignUp ? 'Sign Up' : 'Sign In'
+              )}
+            </Button>
+          </Stack>
         </form>
 
         <Button
@@ -231,7 +248,7 @@ const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
             resetForm();
           }}
           disabled={loading}
-          className="mt-4"
+          sx={{ mt: 2 }}
         >
           {isSignUp 
             ? 'Already have an account? Sign In' 
